@@ -83,7 +83,7 @@ Obelisk сделан именно под роутер:
 ### Docker (рекомендуется)
 
 ```bash
-git clone https://github.com/<вы>/obelisk.git
+git clone https://github.com/HilistonGit/Obelisk.git
 cd obelisk
 docker compose up -d
 docker compose logs | grep token      # токен доступа к веб-интерфейсу

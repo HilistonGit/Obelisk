@@ -81,7 +81,7 @@ line does, against the same daemon.
 ### Docker (recommended)
 
 ```bash
-git clone https://github.com/<you>/obelisk.git
+git clone https://github.com/HilistonGit/Obelisk.git
 cd obelisk
 docker compose up -d
 docker compose logs | grep token      # the access token for the web interface
