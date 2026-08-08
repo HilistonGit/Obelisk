@@ -1,6 +1,7 @@
 # Obelisk
 
-**A VPN client for OpenWrt that drives Xray-core and sing-box at the same time.**
+**The universal VPN client for OpenWrt.
+One client, two cores, your whole subscription.**
 
 One subscription can carry VLESS over REALITY, Trojan over gRPC, Shadowsocks and
 Hysteria2 all at once. No single core handles all of that well. Obelisk reads the
