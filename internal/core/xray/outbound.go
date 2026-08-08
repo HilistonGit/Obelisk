@@ -1,0 +1,377 @@
+// Package xray renders Obelisk's normalized nodes into Xray-core configuration.
+// It never modifies Xray itself: everything here produces the JSON that a stock
+// xray binary accepts on its command line.
+package xray
+
+import (
+	"fmt"
+
+	"github.com/obelisk-project/obelisk/internal/model"
+)
+
+// Outbound renders one node as an Xray outbound object carrying the given tag.
+//
+// Configurations are built as map[string]any rather than as typed structs
+// because Xray's schema is a union of per-protocol shapes that share almost no
+// fields; encoding/json sorts map keys, so the output is still byte-stable,
+// which is what lets the manager decide whether a reload is actually needed.
+func Outbound(n *model.Node, tag string) (map[string]any, error) {
+	if ok, reason := model.Supports(model.CoreXray, n); !ok {
+		return nil, &model.UnsupportedError{Core: model.CoreXray, Node: n.DisplayName(), Reason: reason}
+	}
+
+	settings, err := outboundSettings(n)
+	if err != nil {
+		return nil, err
+	}
+
+	out := map[string]any{
+		"tag":      tag,
+		"protocol": xrayProtocolName(n.Protocol),
+		"settings": settings,
+	}
+
+	// WireGuard carries its own transport and must not be given stream settings.
+	if n.Protocol != model.ProtoWireGuard {
+		if stream := streamSettings(n); len(stream) > 0 {
+			out["streamSettings"] = stream
+		}
+	}
+	if mux := muxSettings(n); mux != nil {
+		out["mux"] = mux
+	}
+	return out, nil
+}
+
+// xrayProtocolName maps Obelisk's protocol names onto Xray's spelling.
+func xrayProtocolName(p model.Protocol) string {
+	switch p {
+	case model.ProtoShadowsocks:
+		return "shadowsocks"
+	case model.ProtoDirect:
+		return "freedom"
+	default:
+		return string(p)
+	}
+}
+
+// outboundSettings renders the protocol-specific "settings" object.
+func outboundSettings(n *model.Node) (map[string]any, error) {
+	switch n.Protocol {
+	case model.ProtoVLESS:
+		user := map[string]any{
+			"id":         n.UUID,
+			"encryption": "none",
+		}
+		if n.TLS.Encryption != "" {
+			user["encryption"] = n.TLS.Encryption
+		}
+		if n.Flow != "" {
+			user["flow"] = n.Flow
+		}
+		return vnext(n, user), nil
+
+	case model.ProtoVMess:
+		user := map[string]any{
+			"id":       n.UUID,
+			"alterId":  n.AlterID,
+			"security": orDefault(n.VMessSecurity, "auto"),
+		}
+		return vnext(n, user), nil
+
+	case model.ProtoTrojan:
+		return map[string]any{
+			"servers": []any{map[string]any{
+				"address":  n.Server,
+				"port":     n.Port,
+				"password": n.Password,
+			}},
+		}, nil
+
+	case model.ProtoShadowsocks:
+		server := map[string]any{
+			"address":  n.Server,
+			"port":     n.Port,
+			"method":   n.Method,
+			"password": n.Password,
+		}
+		if n.UDPOverTCP {
+			server["uot"] = true
+		}
+		return map[string]any{"servers": []any{server}}, nil
+
+	case model.ProtoSOCKS, model.ProtoHTTP:
+		server := map[string]any{
+			"address": n.Server,
+			"port":    n.Port,
+		}
+		if n.Username != "" || n.Password != "" {
+			server["users"] = []any{map[string]any{
+				"user": n.Username,
+				"pass": n.Password,
+			}}
+		}
+		return map[string]any{"servers": []any{server}}, nil
+
+	case model.ProtoWireGuard:
+		return wireGuardSettings(n)
+
+	case model.ProtoDirect:
+		return map[string]any{}, nil
+
+	default:
+		return nil, fmt.Errorf("xray: no outbound mapping for %q", n.Protocol)
+	}
+}
+
+// vnext builds the settings object shared by VLESS and VMess.
+func vnext(n *model.Node, user map[string]any) map[string]any {
+	return map[string]any{
+		"vnext": []any{map[string]any{
+			"address": n.Server,
+			"port":    n.Port,
+			"users":   []any{user},
+		}},
+	}
+}
+
+// wireGuardSettings renders Xray's WireGuard outbound.
+func wireGuardSettings(n *model.Node) (map[string]any, error) {
+	wg := n.WireGuard
+	if wg == nil {
+		return nil, fmt.Errorf("xray: wireguard node has no peer configuration")
+	}
+
+	peer := map[string]any{
+		"publicKey": wg.PeerPublicKey,
+		"endpoint":  n.Address(),
+	}
+	if wg.PreSharedKey != "" {
+		peer["preSharedKey"] = wg.PreSharedKey
+	}
+	if wg.KeepAlive > 0 {
+		peer["keepAlive"] = wg.KeepAlive
+	}
+
+	settings := map[string]any{
+		"secretKey": wg.PrivateKey,
+		"address":   wg.LocalAddress,
+		"peers":     []any{peer},
+	}
+	if wg.MTU > 0 {
+		settings["mtu"] = wg.MTU
+	}
+	if len(wg.Reserved) > 0 {
+		settings["reserved"] = wg.Reserved
+	}
+	return settings, nil
+}
+
+// streamSettings renders the transport and security layers.
+func streamSettings(n *model.Node) map[string]any {
+	stream := map[string]any{
+		"network": xrayNetworkName(n.Transport.Type),
+	}
+
+	switch n.TLS.Security {
+	case model.SecurityTLS:
+		stream["security"] = "tls"
+		stream["tlsSettings"] = tlsSettings(n)
+	case model.SecurityReality:
+		stream["security"] = "reality"
+		stream["realitySettings"] = realitySettings(n)
+	default:
+		stream["security"] = "none"
+	}
+
+	if key, value := transportSettings(n); key != "" {
+		stream[key] = value
+	}
+	return stream
+}
+
+// xrayNetworkName maps a transport onto Xray's network name. Xray renamed "tcp"
+// to "raw" in 1.8.16 but still accepts the old spelling, which is emitted here
+// so that a config generated by Obelisk also runs on older builds.
+func xrayNetworkName(t model.Transport) string {
+	switch t {
+	case model.TransportWebSocket:
+		return "ws"
+	case model.TransportGRPC:
+		return "grpc"
+	case model.TransportHTTP:
+		return "h2"
+	case model.TransportHTTPUpgrade:
+		return "httpupgrade"
+	case model.TransportXHTTP:
+		return "xhttp"
+	case model.TransportKCP:
+		return "kcp"
+	default:
+		return "tcp"
+	}
+}
+
+// transportSettings returns the per-transport settings key and object.
+func transportSettings(n *model.Node) (string, map[string]any) {
+	tr := n.Transport
+
+	switch tr.Type {
+	case model.TransportWebSocket:
+		ws := map[string]any{"path": orDefault(tr.Path, "/")}
+		if h := firstHost(tr.Host); h != "" {
+			ws["host"] = h
+		}
+		if len(tr.Headers) > 0 {
+			ws["headers"] = tr.Headers
+		}
+		if tr.MaxEarlyData > 0 {
+			ws["maxEarlyData"] = tr.MaxEarlyData
+			ws["earlyDataHeaderName"] = orDefault(tr.EarlyDataHeaderName, "Sec-WebSocket-Protocol")
+		}
+		return "wsSettings", ws
+
+	case model.TransportGRPC:
+		grpc := map[string]any{"serviceName": tr.ServiceName}
+		if tr.GRPCMultiMode {
+			grpc["multiMode"] = true
+		}
+		return "grpcSettings", grpc
+
+	case model.TransportHTTP:
+		h2 := map[string]any{"path": orDefault(tr.Path, "/")}
+		if len(tr.Host) > 0 {
+			h2["host"] = tr.Host
+		}
+		return "httpSettings", h2
+
+	case model.TransportHTTPUpgrade:
+		hu := map[string]any{"path": orDefault(tr.Path, "/")}
+		if h := firstHost(tr.Host); h != "" {
+			hu["host"] = h
+		}
+		return "httpupgradeSettings", hu
+
+	case model.TransportXHTTP:
+		xh := map[string]any{"path": orDefault(tr.Path, "/")}
+		if h := firstHost(tr.Host); h != "" {
+			xh["host"] = h
+		}
+		if tr.XHTTPMode != "" {
+			xh["mode"] = tr.XHTTPMode
+		}
+		return "xhttpSettings", xh
+
+	case model.TransportKCP:
+		kcp := map[string]any{
+			"header": map[string]any{"type": orDefault(tr.HeaderType, "none")},
+		}
+		if tr.Seed != "" {
+			kcp["seed"] = tr.Seed
+		}
+		return "kcpSettings", kcp
+
+	default:
+		// Plain TCP only needs settings when HTTP camouflage is in use.
+		if tr.HeaderType != "http" {
+			return "", nil
+		}
+		request := map[string]any{
+			"version": "1.1",
+			"method":  orDefault(tr.Method, "GET"),
+			"path":    []any{orDefault(tr.Path, "/")},
+		}
+		if len(tr.Host) > 0 {
+			request["headers"] = map[string]any{"Host": tr.Host}
+		}
+		return "tcpSettings", map[string]any{
+			"header": map[string]any{
+				"type":    "http",
+				"request": request,
+			},
+		}
+	}
+}
+
+// tlsSettings renders the TLS block.
+func tlsSettings(n *model.Node) map[string]any {
+	tls := map[string]any{}
+	if n.TLS.SNI != "" {
+		tls["serverName"] = n.TLS.SNI
+	}
+	if len(n.TLS.ALPN) > 0 {
+		tls["alpn"] = n.TLS.ALPN
+	}
+	if n.TLS.Fingerprint != "" {
+		tls["fingerprint"] = n.TLS.Fingerprint
+	}
+	if n.TLS.AllowInsecure {
+		tls["allowInsecure"] = true
+	}
+	return tls
+}
+
+// realitySettings renders the REALITY block. REALITY requires a uTLS
+// fingerprint, so one is supplied when the link omitted it rather than letting
+// the handshake fail at runtime.
+func realitySettings(n *model.Node) map[string]any {
+	reality := map[string]any{
+		"publicKey":   n.TLS.PublicKey,
+		"fingerprint": orDefault(n.TLS.Fingerprint, "chrome"),
+	}
+	if n.TLS.SNI != "" {
+		reality["serverName"] = n.TLS.SNI
+	}
+	if n.TLS.ShortID != "" {
+		reality["shortId"] = n.TLS.ShortID
+	}
+	if n.TLS.SpiderX != "" {
+		reality["spiderX"] = n.TLS.SpiderX
+	}
+	return reality
+}
+
+// muxSettings renders Xray's multiplexing block.
+//
+// Mux is deliberately left off unless the node asks for it. It multiplies
+// throughput on high-latency links but serializes streams behind one connection,
+// and it is incompatible with XTLS Vision, which needs a connection per stream to
+// splice at all.
+func muxSettings(n *model.Node) map[string]any {
+	if n.Mux == nil || !n.Mux.Enabled {
+		return nil
+	}
+	if n.Flow == "xtls-rprx-vision" {
+		return nil
+	}
+
+	mux := map[string]any{
+		"enabled":     true,
+		"concurrency": pickInt(n.Mux.Concurrency, 8),
+	}
+	if n.Mux.XUDPConcurrency > 0 {
+		mux["xudpConcurrency"] = n.Mux.XUDPConcurrency
+	}
+	return mux
+}
+
+func orDefault(v, def string) string {
+	if v == "" {
+		return def
+	}
+	return v
+}
+
+func pickInt(v, def int) int {
+	if v == 0 {
+		return def
+	}
+	return v
+}
+
+func firstHost(hosts []string) string {
+	if len(hosts) == 0 {
+		return ""
+	}
+	return hosts[0]
+}

@@ -1,0 +1,8 @@
+Put a screenshot of the Overview page here, named dashboard.png.
+
+Both READMEs reference docs/dashboard.png. 1600px wide or so is plenty; the
+dark theme photographs well against a light GitHub page.
+
+Before taking it: the access token is printed in the header of the console, not
+the page, so it will not appear. The server name and subscription URL will —
+crop or blur them if the provider is not one you want to advertise.

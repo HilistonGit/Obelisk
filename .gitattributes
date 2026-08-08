@@ -1,0 +1,8 @@
+# Normalise to LF in the repository. Shell scripts and the entrypoint run on a
+# router; a CRLF line ending there produces "bad interpreter" on the shebang,
+# which is a confusing way to learn about a text encoding.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.gz  binary

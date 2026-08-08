@@ -1,0 +1,27 @@
+/bin/
+/dist/
+/build/
+*.exe
+*.test
+*.out
+
+# embedded frontend build output
+/web/dist/
+/internal/api/webui/dist/
+node_modules/
+
+# local runtime state
+/run/
+/data/
+*.db
+*.db-wal
+*.db-shm
+obelisk.log
+
+.DS_Store
+.idea/
+.vscode/
+
+# scratch space
+/tmp/
+*.bak

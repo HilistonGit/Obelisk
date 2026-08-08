@@ -1,0 +1,62 @@
+# Obelisk on a router.
+#
+#   docker compose up -d
+#
+# Host networking is not optional for the transparent modes: Obelisk has to put
+# its interface and its firewall rules on the router's own network stack, not on
+# a bridge that only the container can see. In "proxy" mode a bridged network
+# with a published port would do, but then clients must be pointed at the proxy
+# by hand.
+
+services:
+  obelisk:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        VERSION: dev
+    image: obelisk:latest
+    container_name: obelisk
+    restart: unless-stopped
+
+    network_mode: host
+
+    cap_add:
+      # Creating the TUN interface, installing routes, and writing nftables rules.
+      - NET_ADMIN
+      # Setting SO_MARK on the cores' own sockets, which is what keeps Xray's
+      # traffic from being captured by the tunnel it is establishing.
+      - NET_RAW
+
+    devices:
+      # Required for -mode tun. Harmless in the other modes; drop this line if
+      # the host has no tun module and use -mode tproxy instead.
+      - /dev/net/tun:/dev/net/tun
+
+    volumes:
+      # Configuration, state, and any cores installed by "obelisk core update".
+      - ./data:/etc/obelisk
+      - /etc/localtime:/etc/localtime:ro
+
+      # Read-only, and both optional. The lease file turns the connections panel
+      # from a list of addresses into a list of machines; the release file names
+      # the router in the corner of the interface. Comment them out on a system
+      # that has neither — a missing file here stops the container from starting.
+      - /tmp/dhcp.leases:/host/dhcp.leases:ro
+      - /etc/openwrt_release:/host/os-release:ro
+
+    environment:
+      # Fixed access token for the web interface. Leave it unset and Obelisk
+      # generates one per run, printed to the container log.
+      OBELISK_TOKEN: "${OBELISK_TOKEN:-}"
+
+    # The web interface is at http://<router>:24080. Subscriptions, routing rules
+    # and the capture mode are all configured there — nothing else belongs on
+    # this command line.
+    command: ["daemon", "-listen", "0.0.0.0:24080"]
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

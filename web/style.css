@@ -1,0 +1,671 @@
+/* Obelisk — browser interface.
+   One stylesheet, no build step, no framework. On a router the whole page has to
+   arrive from a few kilobytes of embedded assets and stay responsive on a phone
+   held sideways in a hallway. */
+
+:root {
+  --bg:        #0b0e14;
+  --surface:   #111722;
+  --surface-2: #171f2c;
+  --line:      #1f2836;
+  --line-soft: #19212d;
+
+  --text:   #e7edf5;
+  --muted:  #8d9aad;
+  --faint:  #5c6879;
+
+  /* Green is the live colour: it is what "carrying traffic" looks like, and
+     the one thing on the page a glance from across the room has to resolve. */
+  --accent:      #2fd48a;
+  --accent-soft: #2fd48a1f;
+  --ok:          #2fd48a;
+  --ok-soft:     #2fd48a1a;
+  --warn:        #ffb547;
+  --warn-soft:   #ffb5471f;
+  --danger:      #ff5f6d;
+  --danger-soft: #ff5f6d1a;
+
+  --violet: #a78bfa;
+  --blue:   #56a8ff;
+  --cyan:   #38bdf8;
+  --teal:   #2dd4bf;
+
+  --radius: 16px;
+  --radius-sm: 10px;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, Inter, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0; padding: 0; height: 100%;
+  background: var(--bg); color: var(--text);
+  background-image: radial-gradient(1200px 620px at 74% -12%, #14302a 0%, transparent 62%);
+  background-attachment: fixed;
+  font-family: var(--sans);
+  font-size: 15px; line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+.hidden { display: none !important; }
+.muted { color: var(--muted); }
+.small { font-size: .85rem; }
+.error { color: var(--danger); }
+code { font-family: var(--mono); font-size: .88em; background: var(--surface-2);
+       padding: .1em .4em; border-radius: 5px; }
+
+/* ── login ─────────────────────────────────────────────────────────────── */
+.login {
+  min-height: 100%; display: grid; place-items: center; padding: 1.5rem;
+  background: radial-gradient(1100px 600px at 50% -10%, #1a1633 0%, var(--bg) 60%);
+}
+.login-card {
+  width: 100%; max-width: 25rem; background: var(--surface);
+  border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 2.25rem 1.75rem; text-align: center;
+  box-shadow: 0 24px 60px #0008;
+}
+.login-mark { color: var(--accent); margin-bottom: .35rem; }
+.login-card h1 { margin: 0 0 .35rem; font-size: 1.5rem; letter-spacing: -.02em; }
+.login-card p { margin: 0 0 1.4rem; font-size: .9rem; }
+.login-card input { width: 100%; margin-bottom: .85rem; text-align: center; font-family: var(--mono); }
+
+/* ── shell ─────────────────────────────────────────────────────────────── */
+.app { display: grid; grid-template-columns: 248px 1fr; min-height: 100%; }
+
+.nav {
+  background: #0d131c; border-right: 1px solid var(--line);
+  padding: 1.15rem .8rem; display: flex; flex-direction: column; gap: 1.4rem;
+  position: sticky; top: 0; height: 100vh;
+}
+.brand {
+  display: flex; align-items: center; gap: .6rem;
+  font-weight: 650; font-size: 1.06rem; letter-spacing: -.01em;
+  padding: .2rem .5rem; color: var(--text);
+}
+.brand svg { color: var(--accent); }
+.nav nav { display: flex; flex-direction: column; gap: 2px; }
+.nav-item {
+  display: flex; align-items: center; gap: .7rem;
+  background: none; border: 0; color: var(--muted);
+  font: inherit; font-size: .93rem; text-align: left;
+  padding: .6rem .7rem; border-radius: var(--radius-sm); cursor: pointer;
+  transition: background .13s, color .13s;
+}
+/* Inline SVG rather than glyphs: a text symbol renders differently on every
+   platform and falls back to a box where the font lacks it. */
+.nav-item svg { width: 17px; height: 17px; flex: none; opacity: .8; }
+.nav-item:hover { background: var(--surface-2); color: var(--text); }
+.nav-item.active {
+  background: var(--surface-2); color: var(--text);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+.nav-item.active svg { color: var(--accent); }
+.nav-item.active svg { opacity: 1; }
+.nav-item:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn:focus-visible, .power-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.nav-foot { margin-top: auto; }
+
+.main { padding: 1.7rem 1.9rem 3.5rem; max-width: 1360px; width: 100%; }
+.view { display: none; animation: rise .18s ease; }
+.view.active { display: block; }
+@keyframes rise { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+
+.view-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 1rem; margin-bottom: 1.4rem; flex-wrap: wrap;
+}
+.view-head h2 { margin: 0 0 .2rem; font-size: 1.35rem; letter-spacing: -.02em; }
+.view-head p { margin: 0; font-size: .9rem; }
+
+/* ── cards ──────────────────────────────────────────────── */
+.card {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 1.15rem 1.3rem; margin-bottom: 1rem;
+}
+.card h3 { margin: 0 0 .5rem; font-size: 1rem; letter-spacing: -.01em; }
+.card > p:last-child { margin-bottom: 0; }
+.cards { display: flex; flex-direction: column; gap: .7rem; }
+
+.card-head {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 1rem; flex-wrap: wrap; margin-bottom: .7rem;
+}
+.card-head h3 { margin: 0; }
+.card-head > div:first-child { flex: 1; min-width: 14rem; }
+.card-head p { margin: .2rem 0 0; }
+.card-head select { max-width: 11rem; }
+.card-foot {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 1rem; flex-wrap: wrap; margin-top: .8rem;
+  padding-top: .7rem; border-top: 1px solid var(--line-soft);
+}
+
+/* The quick-action column keeps its buttons under their label. */
+.quick-actions { display: flex; flex-direction: column; gap: .1rem; }
+
+/* ── hero: the state, and what is carrying it ──────────────────────────── */
+.hero {
+  display: grid; grid-template-columns: auto minmax(24rem, 1fr); gap: 1.1rem;
+  align-items: stretch; margin-bottom: 1rem;
+}
+.hero-state { display: flex; align-items: center; gap: 1.25rem; }
+.power-btn {
+  position: relative; width: 92px; height: 92px; flex: none;
+  border-radius: 50%; border: 2px solid var(--line);
+  background: var(--surface); color: var(--faint);
+  display: grid; place-items: center; cursor: pointer;
+  transition: color .25s, border-color .25s, background .25s, box-shadow .25s;
+}
+.power-btn .power-ico { width: 40px; height: 40px; }
+.power-btn:hover { border-color: #2c3a4d; }
+.power-btn.on {
+  color: var(--ok); border-color: var(--ok);
+  background: radial-gradient(circle at 50% 50%, #2fd48a1f 0%, transparent 70%);
+  box-shadow: 0 0 0 6px #2fd48a12, 0 0 34px #2fd48a24;
+}
+.power-btn.busy { opacity: .5; pointer-events: none; }
+
+.hero h2 { margin: 0 0 .25rem; font-size: 1.85rem; letter-spacing: -.03em; }
+.hero-sub { margin: 0; display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+.pill-mode {
+  display: inline-flex; align-items: center; border-radius: 999px;
+  padding: .18rem .6rem; font-size: .76rem; font-weight: 600;
+  background: var(--accent-soft); color: var(--accent); border: 1px solid #2fd48a33;
+}
+
+.hero-server {
+  display: grid; align-content: center; gap: .25rem; justify-items: start;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 1rem 1.25rem;
+}
+.hero-server-name {
+  font-size: 1.1rem; font-weight: 600; letter-spacing: -.01em;
+  /* One long node name must not widen the card past its column. */
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.hero-server .btn { margin-top: .6rem; }
+/* The state column keeps the button and its text together rather than letting
+   the pair stretch across whatever width is going spare. */
+.hero-state { padding: .35rem 0; }
+
+/* ── stat row ──────────────────────────────────────────────────────────── */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(11.5rem, 1fr)); gap: .8rem; margin-bottom: 1rem; }
+.stat {
+  display: flex; align-items: center; justify-content: space-between; gap: .8rem;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: .95rem 1.1rem; margin: 0;
+}
+.stat-text { display: flex; flex-direction: column; gap: .1rem; min-width: 0; }
+.stat .label { font-size: .68rem; text-transform: uppercase; letter-spacing: .09em; color: var(--faint); }
+/* Tabular figures so a changing number does not shift the ones beside it. */
+.stat b { font-size: 1.45rem; font-weight: 600; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.stat .sub { font-size: .78rem; color: var(--muted); line-height: 1.35; }
+.stat-ico {
+  position: relative; width: 42px; height: 42px; flex: none;
+  border-radius: 13px; display: grid; place-items: center;
+}
+.stat-ico svg { width: 20px; height: 20px; }
+.i-blue   { background: #56a8ff1a; color: var(--blue); }
+.i-green  { background: #2fd48a1a; color: var(--ok); }
+.i-violet { background: #a78bfa1a; color: var(--violet); }
+.i-cyan   { background: #38bdf81a; color: var(--cyan); }
+.i-teal   { background: #2dd4bf1a; color: var(--teal); }
+.ico-dot {
+  position: absolute; right: -2px; bottom: -2px; width: 10px; height: 10px;
+  border-radius: 50%; background: var(--faint); border: 2px solid var(--surface);
+}
+.ico-dot.on { background: var(--ok); }
+
+/* ── two side by side, stacking when there is no room ──────────────────── */
+.duo {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(27rem, 1fr));
+  gap: 1rem; align-items: stretch; margin-bottom: 1rem;
+}
+/* The grid gap already spaces them; the card's own margin would double it. */
+.duo > .card { margin-bottom: 0; display: flex; flex-direction: column; }
+.duo > .card > .card-foot { margin-top: auto; }
+/* Cards with no footer give their body the spare height instead, so a short
+   panel beside a tall one is padded out rather than leaving a ragged edge. */
+.duo > .card > .health-grid,
+.duo > .card > .conn-grid { flex: 1; align-content: start; }
+
+/* ── controls ──────────────────────────────────────────────────────────── */
+input, select, textarea {
+  background: var(--bg); color: var(--text);
+  border: 1px solid var(--line); border-radius: var(--radius-sm);
+  padding: .55rem .7rem; font: inherit; font-size: .92rem; width: 100%;
+  transition: border-color .13s;
+}
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+input::placeholder, textarea::placeholder { color: var(--faint); }
+textarea { font-family: var(--mono); font-size: .87rem; resize: vertical; line-height: 1.6; }
+select { cursor: pointer; }
+
+.row { display: flex; gap: .6rem; align-items: flex-end; flex-wrap: wrap; margin-top: .8rem; }
+.row > .field { margin-bottom: 0; }
+.row > .btn { margin-bottom: 0; }
+.row > input, .row > select { flex: 1; min-width: 11rem; }
+.field { display: flex; flex-direction: column; gap: .3rem; flex: 1; min-width: 12rem; margin-bottom: .8rem; }
+.field > span { font-size: .82rem; color: var(--muted); }
+.field em { font-style: normal; font-size: .95em; }
+.check { display: flex; align-items: center; gap: .5rem; font-size: .9rem; margin-bottom: .8rem; }
+.check input { width: auto; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .45rem;
+  background: var(--surface-2); color: var(--text);
+  border: 1px solid var(--line); border-radius: var(--radius-sm);
+  padding: .55rem 1rem; font: inherit; font-size: .9rem; font-weight: 500;
+  cursor: pointer; white-space: nowrap; transition: background .13s, border-color .13s;
+}
+/* An icon in a button is decoration beside the label, never a picture in its
+   own right, so it is pinned to text size and kept out of the flex sizing. */
+.btn svg { width: 15px; height: 15px; flex: none; }
+.btn-sm svg { width: 14px; height: 14px; }
+.btn:hover { background: #202636; border-color: #303a52; }
+.btn:disabled { opacity: .45; cursor: default; }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: #06231a; font-weight: 600; }
+.btn-primary:hover { background: #45e09e; border-color: #45e09e; }
+.btn-danger { color: var(--danger); }
+.btn-danger:hover { background: var(--danger-soft); border-color: #ff5f6d55; }
+.btn-block { width: 100%; }
+.btn-sm { padding: .34rem .62rem; font-size: .82rem; }
+
+/* ── pills & badges ────────────────────────────────────────────────────── */
+.pills { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: .7rem; }
+.pill {
+  display: inline-flex; align-items: center; gap: .45rem;
+  background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: 999px; padding: .3rem .75rem; font-size: .85rem;
+}
+.pill b { font-weight: 600; }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); flex: none; }
+.dot.ok { background: var(--ok); }
+.dot.warn { background: var(--warn); }
+.dot.off { background: var(--faint); }
+
+.badge {
+  display: inline-block; padding: .12rem .48rem; border-radius: 6px;
+  font-size: .74rem; font-weight: 600; letter-spacing: .02em;
+  background: var(--surface-2); color: var(--muted); border: 1px solid var(--line-soft);
+}
+.badge.proxy   { background: var(--accent-soft); color: #6fe0ae; border-color: #2fd48a44; }
+.badge.direct  { background: var(--ok-soft);     color: var(--ok);     border-color: #2fd48a44; }
+.badge.block   { background: var(--danger-soft); color: var(--danger); border-color: #ff5f6d44; }
+.badge.xray    { background: #ff9f0a1f; color: #ffb04a; border-color: #ff9f0a44; }
+.badge.singbox { background: #35a7ff1f; color: #6dc0ff; border-color: #35a7ff44; }
+.badge.dead    { background: var(--danger-soft); color: var(--danger); border-color: #ff5f6d44; }
+
+/* ── throughput ────────────────────────────────────────────────────────── */
+.rates { display: flex; gap: 1.1rem; font-family: var(--mono); font-size: .95rem; }
+.rate { display: inline-flex; align-items: baseline; gap: .3rem; }
+.rate .arrow { font-size: .85rem; opacity: .8; }
+.rate.down { color: var(--ok); }
+.rate.up { color: #6dc0ff; }
+.spark { width: 100%; height: 90px; margin: .6rem 0 .3rem; display: block; overflow: visible; }
+.spark.tall { height: 110px; }
+.hist-bar { fill: var(--ok); opacity: .85; }
+.hist-bar.up { fill: #6dc0ff; opacity: .7; }
+#spark-down { stroke: var(--ok); }
+#spark-up { stroke: #6dc0ff; }
+
+/* Latency badges. Colour carries the same meaning as the number so the list is
+   scannable without reading every value. */
+.badge.lat-fast { background: var(--ok-soft);     color: var(--ok);     border-color: #2fd48a44; }
+.badge.lat-ok   { background: var(--warn-soft);   color: var(--warn);   border-color: #ffb54744; }
+.badge.lat-slow { background: #ff8c0a1f;          color: #ffa04a;       border-color: #ff8c0a44; }
+.badge.lat-dead { background: var(--danger-soft); color: var(--danger); border-color: #ff5f6d44; }
+.badge.active   { background: var(--accent-soft); color: #6fe0ae; border-color: #2fd48a66; }
+
+/* ── rules ─────────────────────────────────────────────────────────────── */
+.rules { display: flex; flex-direction: column; gap: 1px; margin-top: .8rem;
+         border: 1px solid var(--line-soft); border-radius: var(--radius-sm); overflow: hidden; }
+.rule {
+  display: flex; align-items: center; gap: .75rem;
+  padding: .6rem .8rem; background: var(--surface-2);
+}
+.rule.off { opacity: .45; }
+.rule .idx { font-family: var(--mono); font-size: .78rem; color: var(--faint); min-width: 1.6rem; }
+.rule .val { font-family: var(--mono); font-size: .87rem; word-break: break-all; flex: 1; }
+.rule .meta { font-size: .78rem; color: var(--faint); }
+.rule .acts { display: flex; gap: .3rem; opacity: 0; transition: opacity .13s; }
+.rule:hover .acts, .rule:focus-within .acts { opacity: 1; }
+
+.notice {
+  border-radius: var(--radius-sm); padding: .7rem .85rem; margin-top: .8rem;
+  font-size: .87rem; border: 1px solid;
+}
+.notice.warn   { background: var(--warn-soft);   border-color: #ffb54744; color: #ffcf8a; }
+.notice.bad    { background: var(--danger-soft); border-color: #ff5f6d44; color: #ff9aa3; }
+.notice.good   { background: var(--ok-soft);     border-color: #2fd48a44; color: #7fe6b8; }
+.notice.plain  { background: var(--surface-2);   border-color: var(--line); color: var(--muted); }
+.notice b { color: inherit; }
+.notice ul { margin: .4rem 0 0; padding-left: 1.1rem; }
+.notice li { margin: .18rem 0; }
+.notice code { background: #0006; }
+
+/* Script-filled containers. Empty ones are taken out of the flow entirely so
+   they cannot collapse a neighbour's margin into nothing, and their contents
+   carry explicit spacing rather than relying on what collapses. */
+#conflicts:empty, #provider-rules:empty, #rule-feedback:empty,
+#sub-feedback:empty, #test-result:empty { display: none; }
+#conflicts > *, #provider-rules > * { margin-top: 0; margin-bottom: 1rem; }
+#conflicts, #provider-rules { display: flow-root; }
+
+/* ── subscription groups and servers ───────────────────────────────────── */
+.group { padding: 0; overflow: hidden; }
+.group.off { opacity: .5; }
+.group-head {
+  display: flex; align-items: center; gap: .7rem; flex-wrap: wrap;
+  padding: .9rem 1.1rem; border-bottom: 1px solid var(--line-soft);
+}
+.group-head .title { font-weight: 600; letter-spacing: -.01em; }
+.group-head .sub { font-size: .8rem; color: var(--muted); font-family: var(--mono); word-break: break-all; }
+.group-head .sub.error { color: var(--danger); font-family: var(--sans); }
+.group .grow { flex: 1; min-width: 11rem; }
+.group > p { padding: .9rem 1.1rem; margin: 0; }
+
+.icon-btn {
+  background: none; border: 1px solid transparent; border-radius: var(--radius-sm);
+  color: var(--muted); padding: .35rem; cursor: pointer; display: grid; place-items: center;
+  transition: background .13s, color .13s, border-color .13s;
+}
+.icon-btn svg { width: 17px; height: 17px; display: block; }
+.icon-btn:hover { background: var(--surface-2); color: var(--text); border-color: var(--line); }
+.icon-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.icon-btn.danger:hover { background: var(--danger-soft); color: var(--danger); border-color: #ff5f6d55; }
+.icon-btn.busy { opacity: .4; pointer-events: none; }
+.icon-btn.busy svg { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.ua-row {
+  display: flex; align-items: center; gap: .6rem; flex-wrap: wrap;
+  padding: .6rem 1.1rem; border-bottom: 1px solid var(--line-soft); background: var(--bg);
+}
+.ua-row select { width: auto; min-width: 11rem; padding: .3rem .5rem; font-size: .85rem; }
+.ua-row > .small:last-child { flex: 1; min-width: 14rem; }
+
+.server-list { display: flex; flex-direction: column; }
+.server {
+  display: flex; align-items: center; gap: .75rem;
+  padding: .55rem 1.1rem; border-top: 1px solid var(--line-soft);
+  transition: background .12s;
+}
+.server:first-child { border-top: 0; }
+.server[data-node-select] { cursor: pointer; }
+.server[data-node-select]:hover { background: var(--surface-2); }
+.server:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.server .title { font-size: .93rem; }
+.server .sub { font-size: .78rem; color: var(--faint); font-family: var(--mono); }
+.server.dead { opacity: .5; }
+
+/* The server actually carrying traffic. A left rail plus a filled marker, so it
+   reads at a glance without hunting for a coloured word in a row of badges. */
+.server .pick {
+  width: 9px; height: 9px; border-radius: 50%; flex: none;
+  border: 1.5px solid var(--line); background: transparent; transition: all .15s;
+}
+.server.active { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+.server.active .pick { border-color: var(--accent); background: var(--accent); box-shadow: 0 0 0 3px #2fd48a33; }
+.server.active .title { font-weight: 600; color: #b8f0d5; }
+
+/* ── list rows ─────────────────────────────────────────────────────────── */
+.row-card {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius-sm); padding: .8rem 1rem;
+  display: flex; align-items: center; gap: .85rem; flex-wrap: wrap;
+}
+.row-card .grow { flex: 1; min-width: 12rem; }
+.row-card .title { font-weight: 550; margin-bottom: .12rem; }
+.row-card .sub { font-size: .82rem; color: var(--muted); font-family: var(--mono); word-break: break-all; }
+
+/* ── logs ──────────────────────────────────────────────────────────────── */
+.log-pre {
+  background: #06080c; border: 1px solid var(--line); border-radius: var(--radius-sm);
+  padding: .85rem 1rem; font-family: var(--mono); font-size: .8rem; line-height: 1.65;
+  overflow: auto; white-space: pre-wrap; word-break: break-word; margin: 0;
+  color: #b8c0d0; max-height: 22rem;
+}
+.log-pre.tall { max-height: calc(100vh - 14rem); }
+.error-title { color: var(--danger); }
+
+/* ── toast ─────────────────────────────────────────────────────────────── */
+.toast {
+  position: fixed; left: 50%; bottom: 1.6rem; transform: translateX(-50%);
+  background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: var(--radius-sm); padding: .65rem 1.1rem; font-size: .89rem;
+  box-shadow: 0 12px 32px #000a; z-index: 50; max-width: 90vw;
+  animation: rise .18s ease;
+}
+.toast.bad  { border-color: #ff5f6d55; color: #ff9aa3; }
+.toast.good { border-color: #2fd48a55; color: #7fe6b8; }
+
+/* ── narrow screens ────────────────────────────────────────────────────── */
+@media (max-width: 800px) {
+  .app { grid-template-columns: 1fr; }
+  .nav {
+    position: fixed; bottom: 0; top: auto; left: 0; right: 0;
+    height: auto; flex-direction: row; z-index: 40;
+    border-right: 0; border-top: 1px solid var(--line);
+    padding: .4rem .3rem calc(.4rem + env(safe-area-inset-bottom));
+    gap: 0; overflow-x: auto;
+  }
+  .brand, .nav-foot { display: none; }
+  .nav nav { flex-direction: row; width: 100%; justify-content: space-around; }
+  .nav-item { flex-direction: column; gap: .2rem; font-size: .68rem; padding: .4rem .3rem; flex: 1; text-align: center; }
+  .nav-item svg { width: 20px; height: 20px; }
+  .main { padding: 1.2rem 1rem 6rem; }
+  .power { gap: 1.1rem; }
+  .power-btn { width: 92px; height: 92px; }
+  .power-text h2 { font-size: 1.3rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+
+/* ── split tunnel mode ─────────────────────────────────────────────────── */
+/* Three cards rather than a dropdown: the choice decides where a household's
+   traffic goes, and each option needs a sentence to be unambiguous. A select
+   can only show one of those sentences at a time — the one you already chose. */
+.split-switch {
+  display: grid; gap: .6rem; margin: .25rem 0 .1rem;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+}
+.split-opt {
+  display: grid; gap: .3rem; text-align: left; cursor: pointer;
+  grid-template-columns: 1.35rem 1fr; grid-template-areas: "icon title" ".  desc";
+  align-items: center;
+  background: var(--surface-2); color: var(--text);
+  border: 1px solid var(--line); border-radius: var(--radius-sm);
+  padding: .8rem .9rem; font: inherit;
+  transition: border-color .14s, background .14s, box-shadow .14s;
+}
+.split-opt svg {
+  grid-area: icon; width: 18px; height: 18px; fill: none;
+  stroke: var(--faint); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round;
+  transition: stroke .14s;
+}
+.split-opt b    { grid-area: title; font-size: .93rem; font-weight: 600; }
+.split-opt span { grid-area: desc; font-size: .8rem; color: var(--muted); line-height: 1.4; }
+.split-opt:hover { border-color: #2f3650; background: #1b2030; }
+.split-opt:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.split-opt[aria-checked="true"] {
+  border-color: #2fd48a88; background: var(--accent-soft);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.split-opt[aria-checked="true"] b    { color: #b8f0d5; }
+.split-opt[aria-checked="true"] svg  { stroke: var(--accent); }
+.split-opt[aria-checked="true"] span { color: #93b8a8; }
+.split-opt[disabled] { opacity: .55; cursor: default; }
+
+#split-note { margin-top: .7rem; }
+
+/* A rule that agrees with the fallback cannot change any outcome. Saying so is
+   better than leaving a user to wonder why the entry they added does nothing. */
+.rule-inert { opacity: .55; }
+.badge.inert { background: #232838; color: var(--faint); border-color: var(--line); }
+
+/* ── server spec ───────────────────────────────────────────────────────── */
+/* Protocol, transport and TLS, in that order — which is how a share link reads
+   and how anyone comparing two servers scans them. Kept quieter than latency
+   and the core badge, which are the things you act on. */
+.spec { display: inline-flex; gap: .3rem; flex: none; }
+.badge.spec-proto { background: #a78bfa1a; color: var(--violet); border-color: #a78bfa33; }
+.badge.spec-net   { background: #35a7ff14; color: #7fbfe8; border-color: #35a7ff2e; }
+.badge.spec-tls   { background: #2fd48a14; color: #62c79c; border-color: #2fd48a2e; }
+/* REALITY is not just another TLS: it is the reason a node survives where the
+   others do not, so it is worth being able to find one at a glance. */
+.badge.spec-reality { background: #ff9f0a1f; color: #ffb04a; border-color: #ff9f0a44; }
+
+@media (max-width: 720px) {
+  .spec .badge.spec-net, .spec .badge.spec-tls { display: none; }
+}
+
+/* Kept, but not in force. Greyed rather than hidden — a list that vanished when
+   a mode changed would read as a list that was thrown away. */
+.dim { opacity: .45; }
+
+/* ── reachability ──────────────────────────────────────────────────────── */
+.health-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); margin-top: .3rem; }
+.health-head { display: flex; align-items: center; gap: .5rem; margin-bottom: .45rem; font-size: .93rem; }
+.health-list { display: flex; flex-direction: column; gap: .25rem; }
+.health-row {
+  display: flex; justify-content: space-between; gap: .75rem; align-items: baseline;
+  padding: .3rem .6rem; border-radius: var(--radius-sm); background: var(--surface-2);
+  border-left: 2px solid var(--line);
+}
+.health-row.ok  { border-left-color: var(--ok); }
+.health-row.bad { border-left-color: var(--danger); }
+.health-row .h-host { font-size: .85rem; }
+.health-row .h-res  { font-size: .78rem; color: var(--muted); font-family: var(--mono); }
+.health-row.bad .h-res { color: var(--danger); }
+.dot.bad { background: var(--danger); }
+
+/* ══ dashboard components ═══════════════════════════════════════════════ */
+
+/* ── charts ────────────────────────────────────────────────────────────── */
+/* The axis labels are HTML beside the SVG rather than <text> inside it. The
+   plot is stretched with preserveAspectRatio="none", which would squash any
+   text drawn in the same coordinate space along with it. */
+.chart-card { display: flex; flex-direction: column; }
+.plot { display: grid; grid-template-columns: 3.6rem 1fr; align-items: stretch; flex: 1; min-height: 132px; }
+.y-axis {
+  display: flex; flex-direction: column; justify-content: space-between;
+  padding: 0 .5rem .2rem 0; text-align: right;
+  font-size: .68rem; color: var(--faint); font-variant-numeric: tabular-nums;
+}
+.x-axis {
+  display: flex; justify-content: space-between; padding-left: 3.6rem; margin-top: .35rem;
+  font-size: .68rem; color: var(--faint); font-variant-numeric: tabular-nums;
+}
+.spark { width: 100%; height: 100%; min-height: 120px; display: block; }
+.grid-line { stroke: var(--line-soft); stroke-width: 1; vector-effect: non-scaling-stroke; }
+/* Tunnel is the accent, direct is deliberately quieter: the interesting part of
+   the picture is how much is being carried, not how much is not. */
+#spark-tunnel { fill: #2fd48a55; }
+#spark-direct { fill: #56a8ff2e; }
+#spark-down   { stroke: var(--text); opacity: .5; }
+
+.legend b { font-variant-numeric: tabular-nums; color: var(--muted); font-weight: 600; margin-right: .5rem; }
+.legend i.sw-tunnel { background: var(--ok); }
+.legend i.sw-direct { background: var(--blue); margin-left: .35rem; }
+.key {
+  display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+  margin-right: .35rem; vertical-align: baseline;
+}
+.key-tunnel { background: var(--ok); }
+.key-direct { background: var(--blue); margin-left: .6rem; }
+.hist-bar    { fill: var(--ok); }
+.hist-bar.up { fill: var(--blue); }
+
+.rates { display: flex; gap: 1.1rem; align-items: baseline; }
+.rate { display: inline-flex; align-items: baseline; gap: .28rem; font-size: .95rem; font-variant-numeric: tabular-nums; }
+.rate .arrow { font-size: .8rem; }
+.rate.down { color: var(--ok); }
+.rate.up   { color: var(--blue); }
+
+.legend { display: inline-flex; align-items: center; gap: .45rem; font-size: .78rem; color: var(--muted); }
+.legend i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.legend i.sw-down { background: var(--ok); }
+.legend i.sw-up   { background: var(--blue); margin-left: .5rem; }
+
+/* ── active connections ────────────────────────────────────────────────── */
+/* Grouped by which machine is responsible rather than by protocol: at any
+   moment nearly every connection carries the protocol of the one selected
+   server, so that breakdown is a pie chart of a single number. Which device is
+   busy changes minute by minute and is the thing worth looking at. */
+.conn-total { font-size: 1.5rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.conn-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 1.2rem; }
+.eyebrow {
+  display: block; font-size: .68rem; text-transform: uppercase;
+  letter-spacing: .09em; color: var(--faint); margin-bottom: .55rem;
+}
+.bar-list { display: flex; flex-direction: column; gap: .5rem; }
+.bar-row { display: grid; gap: .22rem; }
+.bar-top { display: flex; justify-content: space-between; gap: .6rem; align-items: baseline; font-size: .84rem; }
+.bar-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar-name .ip { color: var(--faint); font-family: var(--mono); font-size: .78rem; margin-left: .35rem; }
+.bar-val { color: var(--muted); font-size: .76rem; font-variant-numeric: tabular-nums; flex: none; }
+.bar-track { height: 5px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 3px; background: var(--ok); transition: width .35s ease; }
+.bar-fill.mixed { background: linear-gradient(90deg, var(--ok) var(--split, 50%), var(--faint) var(--split, 50%)); }
+.bar-empty { color: var(--faint); font-size: .85rem; padding: .4rem 0; }
+
+/* ── quick actions ─────────────────────────────────────────────────────── */
+.quick {
+  display: grid; grid-template-columns: 1fr auto auto; gap: 1.5rem; align-items: center;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 1rem 1.3rem;
+}
+.quick .row { margin-top: .1rem; }
+
+.toggle { display: flex; align-items: center; gap: .7rem; cursor: pointer; }
+.toggle input { position: absolute; opacity: 0; width: 0; height: 0; }
+.track {
+  position: relative; width: 42px; height: 24px; flex: none;
+  border-radius: 999px; background: var(--surface-2);
+  border: 1px solid var(--line); transition: background .18s, border-color .18s;
+}
+.knob {
+  position: absolute; top: 2px; left: 2px; width: 18px; height: 18px;
+  border-radius: 50%; background: var(--faint); transition: transform .18s, background .18s;
+}
+.toggle input:checked + .track { background: var(--accent-soft); border-color: var(--accent); }
+.toggle input:checked + .track .knob { transform: translateX(18px); background: var(--accent); }
+.toggle input:focus-visible + .track { outline: 2px solid var(--accent); outline-offset: 2px; }
+.toggle-text { display: flex; flex-direction: column; gap: .05rem; }
+.toggle-text b { font-size: .88rem; font-weight: 600; }
+
+/* ── the box this is running on ────────────────────────────────────────── */
+.device {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: .85rem .9rem;
+}
+.device-head { display: flex; align-items: center; gap: .6rem; margin-bottom: .5rem; }
+.device-head > div { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; }
+.device-head b { font-size: .87rem; font-weight: 600; }
+.device-head .small { font-family: var(--mono); font-size: .7rem; }
+.device-ico {
+  width: 30px; height: 30px; flex: none; border-radius: 9px;
+  background: var(--accent-soft); color: var(--accent);
+  display: grid; place-items: center;
+}
+.device-ico svg { width: 16px; height: 16px; }
+.device-art { width: 100%; height: auto; display: block; margin: .1rem 0 .45rem; }
+.device-meta { display: flex; flex-direction: column; gap: .1rem; font-size: .72rem; }
+
+/* ── narrow screens ────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .app { grid-template-columns: 1fr; }
+  .nav { position: static; height: auto; flex-direction: row; flex-wrap: wrap; align-items: center; gap: .6rem; }
+  .nav nav { flex-direction: row; flex-wrap: wrap; }
+  .nav-foot { margin: 0; width: 100%; }
+  .device-art { display: none; }
+  .main { padding: 1.2rem 1rem 3rem; }
+  .hero { grid-template-columns: 1fr; }
+  .hero-server { min-width: 0; }
+  .quick { grid-template-columns: 1fr; gap: 1rem; }
+}

@@ -1,0 +1,53 @@
+# syntax=docker/dockerfile:1
+#
+# Obelisk image built from binaries that already exist.
+#
+# The full Dockerfile compiles Obelisk and fetches the cores as part of the
+# build. That is right for CI, and wrong on a router: it would pull a Go
+# toolchain and the whole source tree onto a device that has neither the disk
+# nor the patience for it.
+#
+# This variant assumes a directory containing an already cross-compiled
+# `obelisk` plus the two cores, and does nothing but package them. It builds in
+# seconds and pulls only the Alpine base.
+#
+#   docker build -f docker/Dockerfile.prebuilt --build-arg SRC=./payload -t obelisk:local .
+#
+# The cores must be musl builds, because this image is Alpine. Obelisk's own
+# installer picks the right ones when told the target ends in /musl.
+
+FROM alpine:3.22
+
+ARG SRC=.
+
+RUN apk add --no-cache \
+        ca-certificates \
+        tzdata \
+        nftables \
+        iptables \
+        ip6tables \
+        iproute2 \
+    && rm -rf /var/cache/apk/*
+
+COPY ${SRC}/obelisk   /usr/local/bin/obelisk
+COPY ${SRC}/sing-box  /usr/local/bin/sing-box
+COPY ${SRC}/xray      /usr/local/bin/xray
+COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+
+RUN chmod +x /usr/local/bin/obelisk \
+             /usr/local/bin/sing-box \
+             /usr/local/bin/xray \
+             /usr/local/bin/entrypoint.sh \
+    && /usr/local/bin/obelisk version \
+    && /usr/local/bin/sing-box version \
+    && /usr/local/bin/xray version
+
+VOLUME ["/etc/obelisk"]
+ENV OBELISK_DIR=/etc/obelisk
+EXPOSE 24080
+
+HEALTHCHECK --interval=60s --timeout=15s --start-period=20s --retries=3 \
+    CMD ["/usr/local/bin/obelisk", "core", "status", "sing-box", "-offline", "-dir", "/etc/obelisk/bin"]
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD ["daemon"]

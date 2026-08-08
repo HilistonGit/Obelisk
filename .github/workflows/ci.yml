@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      # The browser interface is not compiled, so it is not covered by go test.
+      # It is driven under Node against a stub DOM instead.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Formatting
+        run: test -z "$(gofmt -l .)" || { gofmt -l .; echo 'run gofmt -w .'; exit 1; }
+
+      - run: go vet ./...
+      - run: go test ./...
+      - run: node web/smoke.mjs
+
+  build:
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      # Every architecture OpenWrt actually ships on. CGO stays off throughout,
+      # which is what lets one source tree produce a binary for all of them.
+      - name: Cross-compile
+        run: make release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: obelisk-binaries
+          path: dist/
+          retention-days: 14

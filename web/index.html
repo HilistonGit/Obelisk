@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark light">
+  <title>Obelisk</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%232fd48a'/><path d='M16 5l5 6v16h-10V11z' fill='%2306231a'/></svg>">
+</head>
+<body>
+
+<!-- ── login ─────────────────────────────────────────────────────────────── -->
+<div id="login" class="login hidden">
+  <form class="login-card" id="login-form">
+    <div class="login-mark"><svg viewBox="0 0 32 32" width="34" height="34"><path d="M16 3l6 8v18h-12V11z" fill="currentColor"/></svg></div>
+    <h1>Obelisk</h1>
+    <p class="muted">Paste the access token printed in the console when Obelisk started.</p>
+    <input id="login-token" type="password" placeholder="Access token" autocomplete="current-password" spellcheck="false">
+    <button type="submit" class="btn btn-primary btn-block">Unlock</button>
+    <p id="login-error" class="error hidden"></p>
+  </form>
+</div>
+
+<!-- ── application ───────────────────────────────────────────────────────── -->
+<div id="app" class="app hidden">
+
+  <aside class="nav">
+    <div class="brand">
+      <svg viewBox="0 0 32 32" width="24" height="24"><path d="M16 3l6 8v18h-12V11z" fill="currentColor"/></svg>
+      <span>Obelisk</span>
+    </div>
+    <nav>
+      <button class="nav-item active" data-view="dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+        Overview</button>
+      <button class="nav-item" data-view="routing">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h6l4 10h6"/><path d="M4 17h6"/><path d="M17 4l3 3-3 3"/><path d="M17 14l3 3-3 3"/></svg>
+        Split tunnel</button>
+      <button class="nav-item" data-view="nodes">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></svg>
+        Servers</button>
+      <button class="nav-item" data-view="cores">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="8" height="8" rx="1"/><path d="M10 3v3M14 3v3M10 18v3M14 18v3M3 10h3M3 14h3M18 10h3M18 14h3"/></svg>
+        Cores</button>
+      <button class="nav-item" data-view="settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h2M10 12h10M4 18h8M16 18h4"/><circle cx="16" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="14" cy="18" r="2"/></svg>
+        Settings</button>
+      <button class="nav-item" data-view="logs">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16M4 10h16M4 15h10M4 20h7"/></svg>
+        Logs</button>
+    </nav>
+    <div class="nav-foot">
+      <div class="device">
+        <div class="device-head">
+          <span class="device-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.5 2.6 3.8 5.7 3.8 9S14.5 18.4 12 21c-2.5-2.6-3.8-5.7-3.8-9S9.5 5.6 12 3z"/></svg></span>
+          <div><b>Obelisk VPN</b><span class="muted small" id="version">—</span></div>
+        </div>
+        <svg class="device-art" viewBox="0 0 200 74" aria-hidden="true">
+          <rect x="18" y="24" width="164" height="34" rx="7" fill="var(--surface-2)" stroke="var(--line)"/>
+          <rect x="18" y="24" width="164" height="12" rx="7" fill="var(--line-soft)"/>
+          <circle cx="34" cy="47" r="3.2" fill="var(--ok)"/>
+          <rect x="46" y="44" width="26" height="5" rx="2.5" fill="var(--line)"/>
+          <rect x="80" y="44" width="14" height="5" rx="2.5" fill="var(--line)"/>
+          <path d="M150 20v-6M162 20v-6" stroke="var(--line)" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <div class="device-meta">
+          <span class="muted small" id="host-os">—</span>
+          <span class="muted small" id="host-uptime"></span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- overview -->
+    <section class="view active" id="view-dashboard">
+
+      <!-- state, and the server carrying it -->
+      <div class="hero">
+        <div class="hero-state">
+          <button id="power-btn" class="power-btn" aria-label="Toggle connection">
+            <svg class="power-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 6L9 17l-5-5"/>
+            </svg>
+          </button>
+          <div>
+            <h2 id="power-state">Disconnected</h2>
+            <p class="hero-sub"><span id="power-detail" class="muted">Not routing any traffic</span>
+              <span class="pill-mode" id="s-mode-pill">&mdash;</span></p>
+          </div>
+        </div>
+
+        <div class="hero-server">
+          <span class="eyebrow">Server in use</span>
+          <div class="hero-server-name" id="s-server">&mdash;</div>
+          <span class="muted small" id="s-server-sub"></span>
+          <button class="btn btn-sm" data-goto="nodes">Change server</button>
+        </div>
+      </div>
+
+      <!-- the five numbers worth a glance -->
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-text"><span class="label">Servers</span><b id="s-nodes">0</b><span class="sub" id="s-nodes-sub">none loaded</span></div>
+          <span class="stat-ico i-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.5 2.6 3.8 5.7 3.8 9S14.5 18.4 12 21c-2.5-2.6-3.8-5.7-3.8-9S9.5 5.6 12 3z"/></svg></span>
+        </div>
+        <div class="stat">
+          <div class="stat-text"><span class="label">Rules</span><b id="s-rules">0</b><span class="sub" id="s-rules-sub">nothing routed</span></div>
+          <span class="stat-ico i-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3l7 3v6c0 4.5-3 7.7-7 9-4-1.3-7-4.5-7-9V6z"/></svg></span>
+        </div>
+        <div class="stat">
+          <div class="stat-text"><span class="label">Capture mode</span><b id="s-mode">&mdash;</b><span class="sub" id="s-mode-sub"></span></div>
+          <span class="stat-ico i-violet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="9" y="3" width="6" height="5" rx="1"/><rect x="2" y="16" width="6" height="5" rx="1"/><rect x="16" y="16" width="6" height="5" rx="1"/><path d="M12 8v4M5 16v-4h14v4"/></svg></span>
+        </div>
+        <div class="stat">
+          <div class="stat-text"><span class="label">Uptime</span><b id="s-uptime">&mdash;</b><span class="sub">since connect</span></div>
+          <span class="stat-ico i-cyan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+        </div>
+        <div class="stat">
+          <div class="stat-text"><span class="label">Cores</span><b id="s-cores">&mdash;</b><span class="sub" id="s-cores-sub"></span></div>
+          <span class="stat-ico i-teal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 2.8l8 4.4v9.6l-8 4.4-8-4.4V7.2z"/><path d="M12 12l8-4.4M12 12v9.2M12 12L4 7.6"/></svg><span class="ico-dot" id="s-cores-dot"></span></span>
+        </div>
+      </div>
+
+      <!-- throughput now, and volume over time -->
+      <div class="duo">
+        <div class="card chart-card" id="traffic-card">
+          <div class="card-head">
+            <h3>Traffic</h3>
+            <div class="rates">
+              <span class="rate down"><span class="arrow">&#8595;</span><b id="t-down">&mdash;</b></span>
+              <span class="rate up"><span class="arrow">&#8593;</span><b id="t-up">&mdash;</b></span>
+            </div>
+          </div>
+          <div class="plot">
+            <div class="y-axis" id="spark-y"></div>
+            <svg id="spark" class="spark" viewBox="0 0 600 150" preserveAspectRatio="none" aria-hidden="true">
+              <g id="spark-grid"></g>
+              <polygon id="spark-tunnel"/>
+              <polygon id="spark-direct"/>
+              <polyline id="spark-down" fill="none" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
+            </svg>
+          </div>
+          <div class="x-axis" id="spark-x"></div>
+          <div class="card-foot">
+            <span class="muted small" id="t-summary">Not connected.</span>
+            <span class="legend">
+              <i class="sw-tunnel"></i>Tunnel <b id="t-tunnel">&mdash;</b>
+              <i class="sw-direct"></i>Direct <b id="t-direct">&mdash;</b>
+            </span>
+          </div>
+        </div>
+
+        <div class="card chart-card" id="history-card">
+          <div class="card-head">
+            <h3>Data usage</h3>
+            <select id="history-period">
+              <option value="hour">Last hour</option>
+              <option value="day" selected>Last 24 hours</option>
+              <option value="month">Last 30 days</option>
+            </select>
+          </div>
+          <div class="plot">
+            <div class="y-axis" id="hist-y"></div>
+            <svg id="hist" class="spark" viewBox="0 0 600 150" preserveAspectRatio="none" aria-hidden="true">
+              <g id="hist-grid"></g>
+              <g id="hist-bars"></g>
+            </svg>
+          </div>
+          <div class="x-axis" id="hist-x"></div>
+          <div class="card-foot">
+            <span class="muted small" id="history-summary">&mdash;</span>
+            <span class="legend"><i class="sw-down"></i>Down <i class="sw-up"></i>Up</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- is it working, and who is using it -->
+      <div class="duo">
+        <div class="card" id="health-card">
+          <div class="card-head">
+            <div>
+              <h3>Reachability</h3>
+              <p class="muted small">Blocked hosts are fetched through the core, so reaching one proves
+                the traffic really left through the tunnel.</p>
+            </div>
+            <button id="health-run" class="btn btn-sm">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 11-3-6.7"/><path d="M21 3v6h-6"/></svg>
+              Check now</button>
+          </div>
+          <div class="health-grid">
+            <div>
+              <div class="health-head"><span class="dot" id="h-net-dot"></span><b>Internet</b>
+                <span class="muted small">never blocked</span></div>
+              <div id="h-net" class="health-list"></div>
+            </div>
+            <div>
+              <div class="health-head"><span class="dot" id="h-tun-dot"></span><b>Tunnel</b>
+                <span class="muted small">blocked without it</span></div>
+              <div id="h-tun" class="health-list"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" id="conn-card">
+          <div class="card-head">
+            <h3>Active connections</h3>
+            <b class="conn-total" id="c-total">0</b>
+          </div>
+          <div class="conn-grid">
+            <div>
+              <span class="eyebrow">By device</span>
+              <div id="c-devices" class="bar-list"></div>
+            </div>
+            <div>
+              <span class="eyebrow">By destination</span>
+              <div id="c-dests" class="bar-list"></div>
+            </div>
+          </div>
+          <div class="card-foot">
+            <span class="muted small" id="c-split">&mdash;</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card hidden" id="zapret-card">
+        <h3>zapret is running alongside</h3>
+        <p class="muted small">A DPI bypass is active on this router. Obelisk routes its injected packets
+          past the tunnel so both keep working: zapret holds the direct path, the tunnel takes the rest.
+          Neither is configured for the other &mdash; see <a href="#" data-goto="settings">Settings</a>.</p>
+      </div>
+
+      <div class="card hidden" id="error-card">
+        <h3 class="error-title">Last error</h3>
+        <pre id="error-text" class="log-pre"></pre>
+      </div>
+
+      <!-- the things worth one click -->
+      <div class="quick">
+        <div class="quick-actions">
+          <span class="eyebrow">Quick actions</span>
+          <div class="row">
+            <button class="btn btn-sm" id="q-reconnect">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 11-3-6.7"/><path d="M21 3v6h-6"/></svg>
+              Reconnect</button>
+            <button class="btn btn-sm" id="q-refresh">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v6M12 3l3 3M12 3L9 6"/><path d="M5 12a7 7 0 1014 0"/></svg>
+              Refresh subscriptions</button>
+            <button class="btn btn-sm btn-danger" id="q-disconnect">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v8"/><path d="M17.7 7.3a8 8 0 11-11.4 0"/></svg>
+              Disconnect</button>
+          </div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="q-killswitch">
+          <span class="track"><span class="knob"></span></span>
+          <span class="toggle-text"><b>Kill switch</b><span class="muted small">Drop LAN traffic that escaped the tunnel</span></span>
+        </label>
+        <label class="toggle">
+          <input type="checkbox" id="q-quic">
+          <span class="track"><span class="knob"></span></span>
+          <span class="toggle-text"><b>Block QUIC</b><span class="muted small">Force browsers onto TCP so it can be captured</span></span>
+        </label>
+      </div>
+    </section>
+
+    <!-- split tunnel -->
+    <section class="view" id="view-routing">
+      <header class="view-head">
+        <div>
+          <h2>Split tunnel</h2>
+          <p class="muted">What goes through the VPN, and what goes round it.</p>
+        </div>
+      </header>
+
+      <div class="card">
+        <h3>How the list is read</h3>
+        <div class="split-switch" id="split-switch" role="radiogroup" aria-label="Split tunnel mode">
+          <button class="split-opt" data-split="proxy-list" role="radio" aria-checked="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h6M14 7h6M4 17h10M18 17h2"/><circle cx="12" cy="7" r="2.2"/><circle cx="16" cy="17" r="2.2"/></svg>
+            <b>Proxy the list</b>
+            <span>Only what you add goes through the VPN. Everything else keeps its normal route.</span>
+          </button>
+          <button class="split-opt" data-split="bypass-list" role="radio" aria-checked="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h4M16 12h4"/><path d="M8 12a4 4 0 0 1 4-4h0a4 4 0 0 1 4 4"/><path d="M8 12a4 4 0 0 0 4 4h0a4 4 0 0 0 4-4"/></svg>
+            <b>Bypass the list</b>
+            <span>Everything goes through the VPN except what you add. This is what a provider's own routing is written for.</span>
+          </button>
+          <button class="split-opt" data-split="off" role="radio" aria-checked="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16"/><path d="M15 7l5 5-5 5"/></svg>
+            <b>Off — everything in</b>
+            <span>All traffic goes through the VPN. No list is consulted, yours or the provider's.</span>
+          </button>
+        </div>
+        <div id="split-note" class="muted small"></div>
+      </div>
+
+      <div class="card" id="rule-add-card">
+        <h3>Add destinations</h3>
+        <p class="muted small">Paste anything — a link from the address bar, a domain, <code>*.wildcard</code>,
+          an IP, or a subnet. One per line. Obelisk works out what each line means.</p>
+        <textarea id="rule-input" rows="4" spellcheck="false"
+          placeholder="https://www.youtube.com/watch?v=…&#10;*.googlevideo.com&#10;142.250.0.0/15&#10;discord.com"></textarea>
+
+        <div class="row">
+          <label class="field">
+            <span>Send to</span>
+            <select id="rule-action">
+              <option value="proxy">the tunnel</option>
+              <option value="direct">direct, bypass the tunnel</option>
+              <option value="block">block entirely</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Only these clients <em class="muted">(optional)</em></span>
+            <input id="rule-sources" placeholder="192.168.1.50, 192.168.1.0/24" spellcheck="false">
+          </label>
+          <button id="rule-add" class="btn btn-primary">Add</button>
+        </div>
+        <div id="rule-feedback"></div>
+      </div>
+
+      <div class="card">
+        <h3>Check a destination</h3>
+        <p class="muted small">See what the rules would do, before anything is applied.</p>
+        <div class="row">
+          <input id="test-dest" placeholder="ads.youtube.com" spellcheck="false">
+          <input id="test-from" placeholder="from client (optional)" spellcheck="false" style="max-width:15rem">
+          <button id="test-btn" class="btn">Check</button>
+        </div>
+        <div id="test-result"></div>
+      </div>
+
+      <div id="conflicts"></div>
+      <div id="provider-rules"></div>
+
+      <div class="card">
+        <div class="card-head">
+          <h3>Rules <span class="muted" id="rule-count"></span></h3>
+          <span class="muted small">Evaluated top to bottom — the first match wins</span>
+        </div>
+        <div id="rule-list" class="rules"></div>
+      </div>
+    </section>
+
+    <!-- servers, grouped by subscription -->
+    <section class="view" id="view-nodes">
+      <header class="view-head">
+        <div><h2>Servers</h2><p class="muted" id="nodes-sub">Grouped by where they came from</p></div>
+        <div class="row" style="margin-top:0">
+          <button id="nodes-test" class="btn">Measure all</button>
+          <button id="nodes-refresh" class="btn">Refresh all</button>
+        </div>
+      </header>
+
+      <div class="card">
+        <h3>Add a subscription</h3>
+        <div class="row">
+          <input id="sub-name" placeholder="Name (optional)" style="max-width:14rem">
+          <input id="sub-url" placeholder="https://example.com/subscription" spellcheck="false">
+          <button id="sub-add" class="btn btn-primary">Add</button>
+        </div>
+        <div id="sub-feedback"></div>
+      </div>
+
+      <div id="node-groups"></div>
+    </section>
+
+    <!-- cores -->
+    <section class="view" id="view-cores">
+      <header class="view-head">
+        <div><h2>Cores</h2><p class="muted">Xray and sing-box stay independent binaries</p></div>
+        <button id="cores-refresh" class="btn">Check for updates</button>
+      </header>
+      <div id="core-list" class="cards"></div>
+    </section>
+
+    <!-- settings -->
+    <section class="view" id="view-settings">
+      <header class="view-head"><div><h2>Settings</h2></div></header>
+      <div class="card">
+        <h3>Traffic capture</h3>
+        <label class="field">
+          <span>Mode</span>
+          <select id="set-mode">
+            <option value="tun">TUN — full capture including UDP and QUIC</option>
+            <option value="tproxy">TPROXY — TCP and UDP via nftables</option>
+            <option value="redirect">REDIRECT — TCP only, most compatible</option>
+            <option value="proxy">Proxy only — clients opt in themselves</option>
+          </select>
+        </label>
+        <p class="muted small">What goes through the tunnel is set in
+          <a href="#" data-goto="routing">Split tunnel</a>.</p>
+      </div>
+
+      <div class="card">
+        <h3>Sharing the router with a DPI bypass</h3>
+        <p class="muted small">Obelisk detects zapret and does not modify it — its strategies come from
+          upstream and change often. This only decides how the two stay out of each other's way.</p>
+        <label class="field">
+          <span>When zapret is present</span>
+          <select id="set-zapret">
+            <option value="share">Share — zapret keeps the direct path, the tunnel takes the rest</option>
+            <option value="exempt">Exempt — the tunnel is hidden from zapret, direct traffic loses the bypass</option>
+            <option value="off">No accommodation</option>
+          </select>
+        </label>
+        <p class="muted small" id="zapret-hint"></p>
+      </div>
+      <div class="card">
+        <h3>DNS</h3>
+        <label class="field"><span>Resolved through the tunnel</span><input id="set-dns-proxy" spellcheck="false"></label>
+        <label class="field"><span>Resolved directly</span><input id="set-dns-direct" spellcheck="false"></label>
+        <label class="check"><input type="checkbox" id="set-fakeip"> Use FakeIP
+          <em class="muted">— needed for domain rules when clients only send addresses</em></label>
+        <label class="field"><span>DNS listen port <em class="muted">(0 to leave DNS alone)</em></span>
+          <input id="set-dns-port" type="number" min="0" max="65535"></label>
+      </div>
+      <div class="row"><button id="set-save" class="btn btn-primary">Save settings</button><span id="set-feedback" class="muted"></span></div>
+    </section>
+
+    <!-- logs -->
+    <section class="view" id="view-logs">
+      <header class="view-head">
+        <div><h2>Logs</h2><p class="muted">Output from the running cores</p></div>
+        <div class="row">
+          <select id="log-core"><option value="">Both cores</option><option value="sing-box">sing-box</option><option value="xray">xray</option></select>
+          <button id="log-refresh" class="btn">Refresh</button>
+        </div>
+      </header>
+      <pre id="log-out" class="log-pre tall"></pre>
+    </section>
+
+  </main>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script type="module" src="/app.js"></script>
+</body>
+</html>
