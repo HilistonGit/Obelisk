@@ -26,7 +26,7 @@ func cmdDaemon(ctx context.Context, args []string) error {
 	listen := fs.String("listen", "0.0.0.0:24080", "address for the web interface")
 	token := fs.String("token", os.Getenv("OBELISK_TOKEN"), "access token; one is generated when empty")
 	ghToken := fs.String("github-token", os.Getenv("GITHUB_TOKEN"), "GitHub token, to raise the API rate limit")
-	autoConnect := fs.Bool("connect", true, "bring the cores up at startup")
+	autoConnect := fs.Bool("connect", true, "override the auto-connect setting for this run")
 	refresh := fs.Duration("refresh", time.Hour, "how often to refresh subscriptions; 0 disables")
 
 	if _, err := parseArgs(fs, args); err != nil {
@@ -79,13 +79,23 @@ func cmdDaemon(ctx context.Context, args []string) error {
 		fmt.Printf("cleared %d routing rule(s) left behind by a previous run\n", removed)
 	}
 
-	if *autoConnect {
-		if err := service.Connect(ctx); err != nil {
-			fmt.Fprintf(os.Stderr, "warning: could not connect at startup: %v\n", err)
-			fmt.Fprintln(os.Stderr, "the interface is up; fix the problem there and press connect")
-		} else {
-			fmt.Println("cores are up")
+	// Whether to come up on its own is a setting, not a command-line argument:
+	// it has to survive a reboot, and the person who changes it does so in the
+	// interface. The flag stays as a deliberate override for one run — useful
+	// when the saved configuration is what you are trying to debug.
+	shouldConnect := service.AutoConnectEnabled()
+	fs.Visit(func(f *flag.Flag) {
+		if f.Name == "connect" {
+			shouldConnect = *autoConnect
 		}
+	})
+
+	if shouldConnect {
+		// In the background, with retries: at boot the WAN may still be dialling
+		// and the first attempt would fail on a link that is seconds away from
+		// working. Doing it here rather than inline also means the interface is
+		// reachable while it happens, so a failure can be seen and fixed.
+		go service.AutoConnect(ctx)
 	}
 
 	if *refresh > 0 {

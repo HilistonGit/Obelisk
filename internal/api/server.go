@@ -650,7 +650,10 @@ func (s *Server) handleCoreUpdate(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, result)
 }
 
+// handleConnect and handleDisconnect both mark the connection as driven by
+// hand, which is what stops the startup retry loop from fighting the user.
 func (s *Server) handleConnect(w http.ResponseWriter, r *http.Request) {
+	s.app.NoteUserIntent()
 	if err := s.app.Connect(r.Context()); err != nil {
 		writeError(w, http.StatusBadGateway, err.Error())
 		return
@@ -659,6 +662,7 @@ func (s *Server) handleConnect(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleDisconnect(w http.ResponseWriter, r *http.Request) {
+	s.app.NoteUserIntent()
 	if err := s.app.Disconnect(r.Context()); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return

@@ -143,6 +143,8 @@ async function loadDashboard() {
     : 'not started';
   $('#s-cores-dot').className = `ico-dot ${up.length ? 'on' : ''}`;
 
+  $('#q-autoconnect').checked = !!s.auto_connect;
+
   $('#error-card').classList.toggle('hidden', !s.last_error);
   $('#error-text').textContent = s.last_error || '';
 
@@ -799,6 +801,21 @@ async function quick(button, fn) {
   }
 }
 
+// settingToggle flips one top-level setting, putting the switch back if the
+// daemon refuses rather than leaving it showing a state that is not real.
+async function settingToggle(key, input, message) {
+  const wanted = input.checked;
+  try {
+    const settings = await api('/settings');
+    settings[key] = wanted;
+    await api('/settings', { method: 'PUT', body: settings });
+    toast(message, 'good');
+  } catch (e) {
+    input.checked = !wanted;
+    toast(e.message, 'bad');
+  }
+}
+
 // firewallToggle flips one firewall setting and puts it back if the daemon
 // refuses, rather than leaving the switch showing a state that is not real.
 async function firewallToggle(key, input) {
@@ -820,6 +837,7 @@ async function loadSettings() {
   const s = await api('/settings');
   $('#set-mode').value = s.mode;
   $('#set-zapret').value = (s.firewall && s.firewall.zapret) || 'share';
+  $('#q-autoconnect').checked = !!s.auto_connect;
   $('#q-killswitch').checked = !!(s.firewall && s.firewall.kill_switch);
   $('#q-quic').checked = !!(s.firewall && s.firewall.block_quic);
   $('#zapret-hint').textContent = {
@@ -933,6 +951,8 @@ function bind() {
 
   // The two switches worth reaching for without opening Settings. They write
   // the same setting the Settings page does, so the two can never disagree.
+  $('#q-autoconnect').addEventListener('change', (e) => settingToggle('auto_connect', e.target,
+    e.target.checked ? 'Will connect on its own at startup' : 'Will stay down until you connect'));
   $('#q-killswitch').addEventListener('change', (e) => firewallToggle('kill_switch', e.target));
   $('#q-quic').addEventListener('change', (e) => firewallToggle('block_quic', e.target));
 

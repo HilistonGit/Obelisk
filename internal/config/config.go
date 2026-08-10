@@ -23,7 +23,7 @@ import (
 
 // CurrentVersion is the schema version written by this build. It exists so that
 // a future change can migrate an old file instead of misreading it.
-const CurrentVersion = 1
+const CurrentVersion = 2
 
 // Config is the whole of Obelisk's persistent state.
 type Config struct {
@@ -175,6 +175,13 @@ type Settings struct {
 	// possible before anything is running — and has to survive a restart.
 	SelectedNode string `json:"selected_node,omitempty"`
 
+	// AutoConnect brings the tunnel up when the daemon starts.
+	//
+	// On a router this is the ordinary case rather than a convenience: the box
+	// reboots after a power cut and nobody is watching, and a VPN that waits to
+	// be switched on by hand is off for as long as it takes somebody to notice.
+	AutoConnect bool `json:"auto_connect"`
+
 	// Split says what the rule list means as a whole: whether it names what
 	// goes through the tunnel, what stays out of it, or nothing at all.
 	Split SplitMode `json:"split"`
@@ -296,8 +303,9 @@ func Default() Config {
 		Subscriptions: []Subscription{},
 		Rules:         []routing.Entry{},
 		Settings: Settings{
-			Mode:       "tun",
-			ProxyGroup: "proxy",
+			Mode:        "tun",
+			AutoConnect: true,
+			ProxyGroup:  "proxy",
 			// A fresh install proxies only what it is asked to. Sending a
 			// household's whole connection through a server it has not chosen
 			// yet is not a default anyone should get by accident.
@@ -365,7 +373,17 @@ func Load(path string) (*Config, error) {
 // applyDefaults fills in fields absent from an older or hand-edited file.
 func (c *Config) applyDefaults() {
 	d := Default()
-	if c.Version == 0 {
+
+	// Schema 2 introduced auto-connect, and a new boolean cannot be given a
+	// default the way a new string can: JSON cannot tell a field that was absent
+	// from one that was written as false, so every existing installation would
+	// silently read the new setting as off. The version number is the only thing
+	// that distinguishes them, which is what it is for.
+	if c.Version < 2 {
+		c.Settings.AutoConnect = d.Settings.AutoConnect
+	}
+
+	if c.Version == 0 || c.Version < CurrentVersion {
 		c.Version = CurrentVersion
 	}
 	if c.Settings.Mode == "" {

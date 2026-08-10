@@ -73,6 +73,13 @@ where the bytes went — through the tunnel or around it. The connections panel
 groups by which machine on the LAN is responsible, with names from the router's
 DHCP leases.
 
+**Auto-connect that survives a reboot.** On by default, and it retries: a router
+comes back from a power cut before its WAN has finished dialling, so a single
+attempt would fail on a link that is seconds away from working and leave the
+tunnel down until somebody noticed. It stands down the moment you connect or
+disconnect by hand — a client that reconnects against a decision you just made
+is worse than one that never connects on its own.
+
 **A CLI that is not an afterthought.** Everything the browser does, the command
 line does, against the same daemon.
 

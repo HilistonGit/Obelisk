@@ -89,3 +89,49 @@ func TestFreshInstallProxiesOnlyWhatItIsAsked(t *testing.T) {
 		t.Error("a fresh install would send unmatched traffic through the tunnel")
 	}
 }
+
+// A boolean added in a later schema needs the version number to be given its
+// default, because JSON cannot distinguish a field that was absent from one
+// written as false. Without this every existing installation would read the new
+// setting as off and the feature would appear not to work.
+func TestAutoConnectIsGrantedToOlderConfigs(t *testing.T) {
+	dir := t.TempDir()
+	path := dir + "/obelisk.json"
+
+	// A file as written by a build that predates the setting.
+	older := `{"version":1,"settings":{"mode":"tun","split":"proxy-list"}}`
+	if err := os.WriteFile(path, []byte(older), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if !cfg.Settings.AutoConnect {
+		t.Error("upgrading left auto-connect off; the setting would look broken to every existing user")
+	}
+	if cfg.Version != CurrentVersion {
+		t.Errorf("version stayed at %d after migration", cfg.Version)
+	}
+}
+
+// Someone who switched it off must keep it off. Re-granting the default on
+// every load would make the switch impossible to use.
+func TestAutoConnectStaysOffOnceChosen(t *testing.T) {
+	dir := t.TempDir()
+	path := dir + "/obelisk.json"
+
+	current := `{"version":2,"settings":{"mode":"tun","split":"proxy-list","auto_connect":false}}`
+	if err := os.WriteFile(path, []byte(current), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.Settings.AutoConnect {
+		t.Error("a deliberate off was overwritten by the default")
+	}
+}

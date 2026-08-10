@@ -616,7 +616,7 @@ select { cursor: pointer; }
 
 /* ── quick actions ─────────────────────────────────────────────────────── */
 .quick {
-  display: grid; grid-template-columns: 1fr auto auto; gap: 1.5rem; align-items: center;
+  display: grid; grid-template-columns: 1fr repeat(3, auto); gap: 1.4rem; align-items: center;
   background: var(--surface); border: 1px solid var(--line);
   border-radius: var(--radius); padding: 1rem 1.3rem;
 }

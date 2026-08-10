@@ -79,7 +79,13 @@ type App struct {
 
 	connected bool
 	lastError string
-	startedAt time.Time
+
+	// manualIntent records that the connection was driven by hand since start.
+	// Automatic retries stand down once it is set: a client that reconnects
+	// against a decision the user just made is worse than one that never
+	// connects on its own.
+	manualIntent bool
+	startedAt    time.Time
 
 	// events fans state changes out to whoever is watching, so the web
 	// interface reflects a change made from the command line without polling.
@@ -151,6 +157,10 @@ type Status struct {
 	Split             string `json:"split"`
 	Subscriptions     int    `json:"subscription_count"`
 
+	// AutoConnect mirrors the setting so the dashboard switch can show it
+	// without a second request.
+	AutoConnect bool `json:"auto_connect"`
+
 	// Zapret reports that a DPI desynchroniser is active alongside Obelisk and
 	// that the cores' own traffic is being kept out of its way.
 	Zapret bool `json:"zapret,omitempty"`
@@ -178,6 +188,7 @@ func (a *App) Status() Status {
 		NodeCount:     len(a.nodes),
 		RuleCount:     len(a.cfg.Rules),
 		Split:         string(a.cfg.Settings.Split),
+		AutoConnect:   a.cfg.Settings.AutoConnect,
 		Zapret:        a.zapret,
 		Subscriptions: len(a.cfg.Subscriptions),
 		CoreBreakdown: map[string]int{},
