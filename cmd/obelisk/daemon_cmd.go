@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/obelisk-project/obelisk/internal/api"
@@ -33,6 +35,10 @@ func cmdDaemon(ctx context.Context, args []string) error {
 		return err
 	}
 
+	parentCtx := ctx
+	ctx, stopDaemon := context.WithCancel(parentCtx)
+	defer stopDaemon()
+	var restarting atomic.Bool
 	app.Version = version
 
 	service, err := app.New(app.Options{
@@ -46,9 +52,10 @@ func cmdDaemon(ctx context.Context, args []string) error {
 	}
 
 	server, accessToken, err := api.New(service, api.Options{
-		Listen: *listen,
-		Token:  *token,
-		Static: web.FS(),
+		Listen:  *listen,
+		Token:   *token,
+		Static:  web.FS(),
+		Restart: func() { restarting.Store(true); stopDaemon() },
 	})
 	if err != nil {
 		return err
@@ -90,19 +97,22 @@ func cmdDaemon(ctx context.Context, args []string) error {
 		}
 	})
 
+	var workers sync.WaitGroup
 	if shouldConnect {
 		// In the background, with retries: at boot the WAN may still be dialling
 		// and the first attempt would fail on a link that is seconds away from
 		// working. Doing it here rather than inline also means the interface is
 		// reachable while it happens, so a failure can be seen and fixed.
-		go service.AutoConnect(ctx)
+		workers.Go(func() { service.AutoConnect(ctx) })
 	}
 
 	if *refresh > 0 {
-		go refreshLoop(ctx, service, *refresh)
+		workers.Go(func() { refreshLoop(ctx, service, *refresh) })
 	}
 
 	err = server.ListenAndServe(ctx)
+	stopDaemon()
+	workers.Wait()
 
 	// The parent context is already cancelled by the time we get here, so the
 	// shutdown path needs one of its own or every stop would time out at once.
@@ -114,6 +124,13 @@ func cmdDaemon(ctx context.Context, args []string) error {
 	fmt.Println("\nstopping cores…")
 	if stopErr := service.Disconnect(stopCtx); stopErr != nil {
 		fmt.Fprintf(os.Stderr, "warning: %v\n", stopErr)
+	}
+	if restarting.Load() && parentCtx.Err() == nil {
+		service.CloseHistory()
+		if err != nil {
+			return err
+		}
+		return restartProcess(accessToken)
 	}
 	return err
 }

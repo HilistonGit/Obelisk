@@ -106,6 +106,18 @@ func applyIdentity(obj map[string]any, n *model.Node) error {
 	case model.ProtoHysteria2:
 		obj["password"] = n.Password
 		if h := n.Hysteria; h != nil {
+			if h.Ports != "" {
+				ports := strings.Split(h.Ports, ",")
+				for i := range ports {
+					ports[i] = strings.ReplaceAll(strings.TrimSpace(ports[i]), "-", ":")
+				}
+				obj["server_ports"] = ports
+				delete(obj, "server_port")
+			}
+			if h.HopInterval > 0 {
+				obj["hop_interval"] = fmt.Sprintf("%ds", h.HopInterval)
+			}
+
 			setPositive(obj, "up_mbps", h.UpMbps)
 			setPositive(obj, "down_mbps", h.DownMbps)
 			if h.Obfs != "" {
@@ -262,7 +274,9 @@ func tlsBlock(n *model.Node) map[string]any {
 			"enabled":     true,
 			"fingerprint": orDefault(n.TLS.Fingerprint, "chrome"),
 		}
-	} else if n.TLS.Fingerprint != "" {
+	} else if n.TLS.Fingerprint != "" && n.Protocol != model.ProtoHysteria2 &&
+		n.Protocol != model.ProtoHysteria && n.Protocol != model.ProtoTUIC {
+		// uTLS cannot be used by QUIC, even when a panel supplies a fingerprint.
 		tls["utls"] = map[string]any{
 			"enabled":     true,
 			"fingerprint": n.TLS.Fingerprint,

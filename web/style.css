@@ -669,3 +669,6 @@ select { cursor: pointer; }
   .hero-server { min-width: 0; }
   .quick { grid-template-columns: 1fr; gap: 1rem; }
 }
+
+/* Keep action icons aligned without browser-dependent inline baselines. */
+.btn svg, .icon-btn svg { display: block; flex-shrink: 0; overflow: visible; }

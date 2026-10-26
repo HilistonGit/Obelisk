@@ -9,6 +9,8 @@ package app
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"sort"
@@ -53,7 +55,8 @@ type App struct {
 	// resolving server names, installing firewall rules. It is held across
 	// seconds by design, which is exactly why it has to be a different lock
 	// from the one readers use.
-	applyMu sync.Mutex
+	applyMu   sync.Mutex
+	refreshMu sync.Mutex
 
 	runtime  *core.Runtime
 	coreMgr  *cores.Manager
@@ -68,8 +71,7 @@ type App struct {
 	history *store.Store
 
 	// providerRules holds the routing each subscription shipped, keyed by
-	// subscription. It is rebuilt on every refresh and never persisted: it
-	// belongs to the provider, not to the user.
+	// subscription. Cached alongside nodes to survive an offline reboot.
 	providerRules map[string]*subs.ProviderRules
 
 	// zapret is whether a DPI desynchroniser is intercepting traffic on this
@@ -99,12 +101,22 @@ func New(opts Options) (*App, error) {
 		return nil, err
 	}
 
+	if cfg.DeviceID == "" {
+		var id [16]byte
+		if _, err := rand.Read(id[:]); err != nil {
+			return nil, err
+		}
+		cfg.DeviceID = hex.EncodeToString(id[:])
+		if err := cfg.Save(opts.ConfigPath); err != nil {
+			return nil, err
+		}
+	}
 	coreDir := opts.CoreDir
 	if cfg.Settings.Core.Dir != "" {
 		coreDir = cfg.Settings.Core.Dir
 	}
 
-	return &App{
+	a := &App{
 		opts:          opts,
 		cfg:           cfg,
 		skipped:       map[string][]subs.SkipReason{},
@@ -115,7 +127,9 @@ func New(opts Options) (*App, error) {
 			ExtraLookupPaths: []string{"/usr/bin", "/usr/local/bin", "/opt/bin"},
 		},
 		events: newEventBus(),
-	}, nil
+	}
+	a.loadSubscriptions()
+	return a, nil
 }
 
 // Config returns a copy of the current configuration.
@@ -429,10 +443,10 @@ func (a *App) SetSubscriptionUserAgent(ctx context.Context, id, userAgent string
 // vanishing: a router that loses its node list because a panel was briefly down
 // is a worse outcome than one running on slightly stale data.
 func (a *App) Refresh(ctx context.Context) error {
+	a.refreshMu.Lock()
+	defer a.refreshMu.Unlock()
 	a.mu.RLock()
 	subscriptions := a.cfg.EnabledSubscriptions()
-	defaultUA := a.cfg.Settings
-	_ = defaultUA
 	a.mu.RUnlock()
 
 	var (
@@ -443,12 +457,21 @@ func (a *App) Refresh(ctx context.Context) error {
 	)
 
 	for _, s := range subscriptions {
-		res, err := subs.Fetch(ctx, s.URL, subs.FetchOptions{UserAgent: s.UserAgent})
+		res, err := subs.Fetch(ctx, s.URL, a.fetchOptions(s.UserAgent))
 		if err != nil {
 			a.recordSubscriptionError(s.ID, err)
 			if firstErr == nil {
 				firstErr = fmt.Errorf("%s: %w", displayName(s), err)
 			}
+			a.mu.RLock()
+			for _, n := range a.nodes {
+				if n.Source == s.ID {
+					collected = append(collected, n)
+				}
+			}
+			skipped[s.ID] = a.skipped[s.ID]
+			imported[s.ID] = a.providerRules[s.ID]
+			a.mu.RUnlock()
 			continue
 		}
 		if res.Result == nil {
@@ -478,6 +501,7 @@ func (a *App) Refresh(ctx context.Context) error {
 	a.nodes = collected
 	a.skipped = skipped
 	a.providerRules = imported
+	cacheErr := a.saveSubscriptions()
 	planOpts := core.DefaultPlanOptions()
 	planOpts.Policy = a.cfg.Settings.Core.Policy
 	plan, err := core.BuildPlan(collected, planOpts)
@@ -491,6 +515,9 @@ func (a *App) Refresh(ctx context.Context) error {
 
 	if firstErr != nil {
 		return firstErr
+	}
+	if cacheErr != nil {
+		return cacheErr
 	}
 	return err
 }
@@ -548,6 +575,8 @@ func displayName(s config.Subscription) string {
 // the failing one holds up the rest — and it is the wrong thing to offer next to
 // a single subscription in the interface.
 func (a *App) RefreshOne(ctx context.Context, id string) error {
+	a.refreshMu.Lock()
+	defer a.refreshMu.Unlock()
 	a.mu.RLock()
 	var target *config.Subscription
 	for i := range a.cfg.Subscriptions {
@@ -561,8 +590,11 @@ func (a *App) RefreshOne(ctx context.Context, id string) error {
 	if target == nil {
 		return fmt.Errorf("no such subscription")
 	}
+	if !target.Enabled {
+		return fmt.Errorf("subscription is disabled")
+	}
 
-	res, err := subs.Fetch(ctx, target.URL, subs.FetchOptions{UserAgent: target.UserAgent})
+	res, err := subs.Fetch(ctx, target.URL, a.fetchOptions(target.UserAgent))
 	if err != nil {
 		a.recordSubscriptionError(id, err)
 		a.events.publish(Event{Type: "nodes"})
@@ -605,12 +637,13 @@ func (a *App) RefreshOne(ctx context.Context, id string) error {
 	if plan, err := core.BuildPlan(a.nodes, planOpts); err == nil {
 		a.plan = plan
 	}
+	cacheErr := a.saveSubscriptions()
 	a.mu.Unlock()
 
 	a.recordSubscriptionSuccess(id, res, len(res.Result.Nodes))
 	a.events.publish(Event{Type: "nodes"})
 	a.reloadAfterChange(ctx)
-	return nil
+	return cacheErr
 }
 
 // PreviewConfig renders the sing-box configuration the daemon would write,
@@ -870,7 +903,7 @@ func (a *App) UpdateCore(ctx context.Context, kind cores.Kind) (*cores.UpdateRes
 // Connect brings the cores up against the current nodes and rules.
 func (a *App) Connect(ctx context.Context) error {
 	a.mu.RLock()
-	hasPlan := a.plan != nil
+	hasPlan := a.plan != nil && len(a.nodes) > 0
 	a.mu.RUnlock()
 
 	if !hasPlan {

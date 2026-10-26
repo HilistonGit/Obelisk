@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/obelisk-project/obelisk/internal/model"
@@ -16,6 +17,40 @@ import (
 // Hysteria 2 always runs over QUIC with TLS, so those are set unconditionally.
 func parseHysteria2(raw string) (*model.Node, error) {
 	body, name := splitFragment(raw)
+
+	// net/url rejects a range in the authority, although Hysteria share links
+	// allow it. Parse the URL with its first port, preserving the full range.
+	var authorityPorts string
+	schemeEnd := strings.Index(body, "://") + 3
+	authorityEnd := strings.IndexAny(body[schemeEnd:], "/?")
+	if authorityEnd < 0 {
+		authorityEnd = len(body)
+	} else {
+		authorityEnd += schemeEnd
+	}
+	authority := body[schemeEnd:authorityEnd]
+	if colon := strings.LastIndex(authority, ":"); colon > strings.LastIndex(authority, "]") && colon > strings.LastIndex(authority, "@") {
+		ports := authority[colon+1:]
+		if strings.ContainsAny(ports, ",-") {
+			for _, part := range strings.Split(ports, ",") {
+				ends := strings.Split(part, "-")
+				if len(ends) > 2 {
+					return nil, fmt.Errorf("hysteria2: invalid port range")
+				}
+				previous := 0
+				for _, end := range ends {
+					port, err := strconv.Atoi(end)
+					if err != nil || port < 1 || port > 65535 || port < previous {
+						return nil, fmt.Errorf("hysteria2: invalid port range")
+					}
+					previous = port
+				}
+			}
+			authorityPorts = ports
+			first := strings.FieldsFunc(ports, func(r rune) bool { return r == ',' || r == '-' })[0]
+			body = body[:schemeEnd+colon+1] + first + body[authorityEnd:]
+		}
+	}
 
 	u, err := url.Parse(body)
 	if err != nil {
@@ -53,7 +88,8 @@ func parseHysteria2(raw string) (*model.Node, error) {
 			DownMbps:     parseBandwidth(firstNonEmpty(q.Get("down"), q.Get("downmbps"))),
 			Obfs:         q.Get("obfs"),
 			ObfsPassword: firstNonEmpty(q.Get("obfs-password"), q.Get("obfsParam"), q.Get("obfs_password")),
-			Ports:        firstNonEmpty(q.Get("mport"), q.Get("ports")),
+			Ports:        firstNonEmpty(authorityPorts, q.Get("mport"), q.Get("ports")),
+			HopInterval:  atoiOr(firstNonEmpty(q.Get("hop-interval"), q.Get("hopInterval")), 0),
 		},
 	}
 

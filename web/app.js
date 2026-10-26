@@ -642,11 +642,11 @@ function renderGroup({ sub, nodes }) {
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 11-3-6.7"/><path d="M21 3v6h-6"/></svg>
     </button>
     <button class="icon-btn" data-sub-test="${id}" title="Measure latency of these servers" aria-label="Measure latency">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20a8 8 0 108-8"/><path d="M12 12l5-4"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 13l4-4M9 2h6M12 2v3"/></svg>
     </button>
     <button class="icon-btn" data-sub-rules="${id}" data-enabled="${!sub.import_rules}"
       title="${sub.import_rules ? 'Ignore the routing rules this provider ships' : 'Use the routing rules this provider ships'}" aria-label="Provider rules">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" ${sub.import_rules ? '' : 'opacity="0.4"'}><path d="M4 7h6l4 10h6"/><path d="M17 4l3 3-3 3"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" ${sub.import_rules ? '' : 'opacity="0.4"'}><path d="M4 7h16M4 17h16M17 4l3 3-3 3M7 14l-3 3 3 3"/></svg>
     </button>
     <button class="icon-btn danger" data-sub-del="${id}" title="Remove this subscription" aria-label="Remove">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>
@@ -936,6 +936,7 @@ function bind() {
   $('#cores-refresh').addEventListener('click', () => loadCores().catch((e) => toast(e.message, 'bad')));
   $('#set-save').addEventListener('click', () => saveSettings().catch((e) => toast(e.message, 'bad')));
   $('#log-refresh').addEventListener('click', () => loadLogs().catch(() => {}));
+  ['#q-restart', '#set-restart'].forEach((id) => $(id).addEventListener('click', restartApp));
   $('#q-reconnect').addEventListener('click', (e) => quick(e.currentTarget, async () => {
     await api('/connect', { method: 'POST' });
     toast('Reconnected', 'good');
@@ -1072,4 +1073,23 @@ if (token) {
   loadHost().catch(() => {});
 } else {
   showLogin();
+}
+
+async function restartApp() {
+  const buttons = ['#q-restart', '#set-restart'].map((id) => $(id));
+  buttons.forEach((b) => { b.disabled = true; });
+  try {
+    await api('/restart', { method: 'POST' });
+    toast('Restarting app...');
+    for (let attempt = 0; attempt < 60; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      try {
+        await api('/status');
+        location.reload();
+        return;
+      } catch (_) { /* Wait until the daemon is reachable again. */ }
+    }
+    throw new Error('Restart is taking longer than expected. Reload this page to retry.');
+  } catch (err) { toast(err.message, 'bad'); }
+  finally { buttons.forEach((b) => { b.disabled = false; }); }
 }

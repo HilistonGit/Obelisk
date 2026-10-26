@@ -27,6 +27,7 @@ const CurrentVersion = 2
 
 // Config is the whole of Obelisk's persistent state.
 type Config struct {
+	DeviceID      string          `json:"device_id,omitempty"`
 	Version       int             `json:"version"`
 	Subscriptions []Subscription  `json:"subscriptions"`
 	Rules         []routing.Entry `json:"rules"`

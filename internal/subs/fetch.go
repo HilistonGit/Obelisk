@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -41,6 +42,7 @@ const DefaultUserAgent = "Obelisk/0.1 (OpenWrt) sing-box/1.13 Xray/26.3"
 // FetchOptions configures a subscription fetch.
 type FetchOptions struct {
 	UserAgent string
+	HWID      string
 	Timeout   time.Duration
 
 	// MaxBytes caps the response size. A subscription is a few kilobytes; a
@@ -104,6 +106,11 @@ func Fetch(ctx context.Context, url string, opts FetchOptions) (*FetchResult, er
 	}
 	req.Header.Set("User-Agent", opts.UserAgent)
 	req.Header.Set("Accept", "*/*")
+	if opts.HWID != "" {
+		req.Header.Set("X-Hwid", opts.HWID)
+		req.Header.Set("X-Device-Os", runtime.GOOS)
+		req.Header.Set("X-Device-Model", "Obelisk "+runtime.GOARCH)
+	}
 	if opts.ETag != "" {
 		req.Header.Set("If-None-Match", opts.ETag)
 	}
@@ -145,6 +152,9 @@ func Fetch(ctx context.Context, url string, opts FetchOptions) (*FetchResult, er
 	result, err := Parse(body)
 	if err != nil {
 		return nil, err
+	}
+	if len(result.Nodes) == 0 {
+		return nil, fmt.Errorf("subscription contains no usable servers (%d skipped)", len(result.Skipped))
 	}
 	out.Result = result
 	return out, nil

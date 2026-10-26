@@ -113,6 +113,7 @@ func clashApplyIdentity(n *model.Node, p map[string]any) error {
 			DownMbps:     parseBandwidth(mStr(p, "down")),
 			Obfs:         mStr(p, "obfs"),
 			ObfsPassword: mStr(p, "obfs-password", "obfs_password"),
+			HopInterval:  mInt(p, "hop-interval"),
 			Ports:        mStr(p, "ports"),
 		}
 	case model.ProtoHysteria:

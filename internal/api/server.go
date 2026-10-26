@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
@@ -38,7 +39,8 @@ type Options struct {
 	Token string
 
 	// Static serves the web interface. Nil disables it and leaves only the API.
-	Static fs.FS
+	Static  fs.FS
+	Restart func()
 }
 
 // Server is the HTTP front end.
@@ -83,6 +85,7 @@ func New(a *app.App, opts Options) (*Server, string, error) {
 
 // ListenAndServe runs the server until the context is cancelled.
 func (s *Server) ListenAndServe(ctx context.Context) error {
+	s.http.BaseContext = func(net.Listener) context.Context { return ctx }
 	errs := make(chan error, 1)
 	go func() {
 		if err := s.http.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -145,6 +148,17 @@ func (s *Server) routes() {
 	api("GET /api/cores", s.handleCores)
 	api("POST /api/cores/{kind}/update", s.handleCoreUpdate)
 
+	api("POST /api/restart", func(w http.ResponseWriter, r *http.Request) {
+		if s.opts.Restart == nil {
+			writeJSON(w, http.StatusNotImplemented, map[string]string{"error": "restart unavailable"})
+			return
+		}
+		writeJSON(w, http.StatusAccepted, map[string]bool{"restarting": true})
+		if f, ok := w.(http.Flusher); ok {
+			f.Flush()
+		}
+		s.opts.Restart()
+	})
 	api("POST /api/connect", s.handleConnect)
 	api("POST /api/disconnect", s.handleDisconnect)
 

@@ -84,6 +84,34 @@ func xrayOutboundToNode(ob map[string]any, protocol string) (*model.Node, error)
 	n := &model.Node{Name: mStr(ob, "tag")}
 
 	switch protocol {
+	case "hysteria", "hysteria2", "hy2":
+		stream := mMap(ob, "streamSettings")
+		h := mMap(stream, "hysteriaSettings")
+		if protocol == "hysteria" && mInt(settings, "version") != 2 {
+			return nil, fmt.Errorf("only Hysteria version 2 is supported in Xray configurations")
+		}
+		n.Protocol = model.ProtoHysteria2
+		n.Server = mStr(settings, "address")
+		n.Port = mInt(settings, "port")
+		n.Password = mStr(h, "auth")
+		hop := mMap(h, "udphop")
+		n.Hysteria = &model.HysteriaOpts{Ports: mStr(hop, "port"), HopInterval: mInt(hop, "interval")}
+		mask := mMap(stream, "finalmask")
+		for _, item := range mList(mask, "udp") {
+			opts := mMap(item, "settings")
+			if mStr(item, "type") != "salamander" || mStr(opts, "packetSize") != "" {
+				return nil, fmt.Errorf("unsupported Hysteria2 UDP mask %q", mStr(item, "type"))
+			}
+			if n.Hysteria.Obfs != "" {
+				return nil, fmt.Errorf("multiple Hysteria2 UDP masks are unsupported")
+			}
+			n.Hysteria.Obfs = "salamander"
+			n.Hysteria.ObfsPassword = mStr(opts, "password")
+		}
+		if hop := mMap(mMap(mask, "quicParams"), "udpHop"); len(hop) > 0 {
+			n.Hysteria.Ports = mStr(hop, "ports")
+			n.Hysteria.HopInterval = mInt(hop, "interval")
+		}
 	case "trojan":
 		servers := mList(settings, "servers")
 		if len(servers) == 0 {
@@ -138,6 +166,13 @@ func xrayOutboundToNode(ob map[string]any, protocol string) (*model.Node, error)
 		return nil, fmt.Errorf("no address")
 	}
 	applyXrayStream(n, mMap(ob, "streamSettings"))
+	if n.Protocol == model.ProtoHysteria2 {
+		n.Transport.Type = model.TransportQUIC
+		n.TLS.Security = model.SecurityTLS
+		if err := n.Validate(); err != nil {
+			return nil, err
+		}
+	}
 	return n, nil
 }
 

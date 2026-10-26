@@ -3,6 +3,8 @@ package subs
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/obelisk-project/obelisk/internal/model"
 )
@@ -91,11 +93,19 @@ func singboxOutboundToNode(o map[string]any) (*model.Node, error) {
 		n.Password = mStr(o, "password")
 		obfs := mMap(o, "obfs")
 		n.Hysteria = &model.HysteriaOpts{
+			Ports:        strings.Join(mStrSlice(o, "server_ports"), ","),
 			UpMbps:       mInt(o, "up_mbps"),
 			DownMbps:     mInt(o, "down_mbps"),
 			Obfs:         mStr(obfs, "type"),
 			ObfsPassword: mStr(obfs, "password"),
 		}
+		if d, err := time.ParseDuration(mStr(o, "hop_interval")); err == nil {
+			n.Hysteria.HopInterval = int(d / time.Second)
+		}
+		if n.Port == 0 && n.Hysteria.Ports != "" {
+			n.Port = 443
+		}
+
 	case model.ProtoHysteria:
 		n.Hysteria = &model.HysteriaOpts{
 			UpMbps:              mInt(o, "up_mbps"),
