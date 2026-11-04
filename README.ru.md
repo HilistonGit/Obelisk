@@ -1,3 +1,5 @@
+<img src="web/obelisk-256.png" width="96" height="96" alt="Obelisk">
+
 # Obelisk
 
 **Универсальный VPN-клиент для OpenWrt.

@@ -10,7 +10,7 @@ import (
 	"io/fs"
 )
 
-//go:embed index.html app.js style.css
+//go:embed index.html app.js style.css obelisk-*.png
 var files embed.FS
 
 // FS returns the interface's static files.
