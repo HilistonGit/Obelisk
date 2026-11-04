@@ -1,6 +1,8 @@
-<img src="web/obelisk-256.png" width="96" height="96" alt="Obelisk">
+<p align="center">
+  <img src="web/obelisk-256.png" width="144" height="144" alt="Obelisk">
+</p>
 
-# Obelisk
+<h1 align="center">Obelisk</h1>
 
 **The universal VPN client for OpenWrt.
 One client, two cores, your whole subscription.**
